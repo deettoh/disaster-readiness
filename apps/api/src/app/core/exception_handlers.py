@@ -15,7 +15,6 @@ def get_request_id(request: Request) -> str | None:
 
 async def app_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """Handle application exceptions."""
-
     assert isinstance(exc, AppError)
     payload = ErrorResponse(
         error=ErrorBody(
@@ -34,7 +33,6 @@ async def validation_exception_handler(
     request: Request, exc: Exception
 ) -> JSONResponse:
     """Handle pydantic validation errors."""
-
     assert isinstance(exc, RequestValidationError)
     payload = ErrorResponse(
         error=ErrorBody(

@@ -7,6 +7,8 @@ from pydantic import BaseModel
 
 
 class AlertItem(BaseModel):
+    """Single alert payload for frontend consumption."""
+
     alert_id: UUID
     level: str
     message: str
@@ -15,5 +17,6 @@ class AlertItem(BaseModel):
 
 
 class AlertListResponse(BaseModel):
-    items: list[AlertItem]
+    """Collection of alert items."""
 
+    items: list[AlertItem]
