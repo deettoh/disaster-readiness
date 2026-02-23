@@ -1,0 +1,22 @@
+{
+  "venvPath": ".",
+  "venv": ".venv",
+  "include": [
+    "apps/api/src",
+    "tests/api"
+  ],
+  "executionEnvironments": [
+    {
+      "root": "apps/api/src",
+      "extraPaths": [
+        "apps/api/src"
+      ]
+    },
+    {
+      "root": "tests",
+      "extraPaths": [
+        "apps/api/src"
+      ]
+    }
+  ]
+}
