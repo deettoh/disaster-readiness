@@ -2,13 +2,14 @@
 
 from fastapi import APIRouter
 
+from app.api.routes.reports import router as reports_router
 from app.schemas.common import ApiInfoResponse
 
 api_router = APIRouter(tags=["api"])
+api_router.include_router(reports_router)
 
 
 @api_router.get("/info", response_model=ApiInfoResponse)
 async def api_info() -> ApiInfoResponse:
     """Simple API metadata endpoint for integration smoke checks."""
     return ApiInfoResponse(service="api", message="Backend foundation ready")
-
