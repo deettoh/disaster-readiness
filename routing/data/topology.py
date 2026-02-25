@@ -3,7 +3,7 @@ from sqlalchemy import create_engine, text
 # --- CONFIGURATION ---
 DATABASE_URL = "postgresql://postgres:root@localhost:5432/routing_db"
 
-def finalize_topology_v4_manual():
+def build_topology():
     engine = create_engine(DATABASE_URL)
     
     # 1. Clean up old data
@@ -53,4 +53,4 @@ def finalize_topology_v4_manual():
             print(f"\nSUCCESS! Found {res[0]} unique intersections (nodes).")
 
 if __name__ == "__main__":
-    finalize_topology_v4_manual()
+    build_topology()
