@@ -5,14 +5,12 @@ def download_pj_road_graph():
     # 1. Define the MVP area
     place_name = "Petaling Jaya, Selangor, Malaysia"
     
-    print(f"🚀 Starting extraction for: {place_name}...")
+    print(f" Starting extraction for: {place_name}...")
     
     # 2. Download the 'drive' network (filters for drivable roads)
-    # This automatically handles topology and intersections
     graph = ox.graph_from_place(place_name, network_type='drive')
     
     # 3. Project the graph 
-    # Important for accurate distance calculations in meters
     graph_projected = ox.project_graph(graph)
     
     # 4. Convert to GeoDataFrames (Nodes and Edges)
@@ -24,8 +22,8 @@ def download_pj_road_graph():
         os.makedirs(output_folder)
         
     edges.to_file(f"{output_folder}/pj_roads.shp")
-    print(f"✅ Success! Road graph saved to ./{output_folder}/pj_roads.shp")
-    print(f"📊 Stats: {len(nodes)} nodes and {len(edges)} road segments extracted.")
+    print(f"Success! Road graph saved to ./{output_folder}/pj_roads.shp")
+    print(f"Stats: {len(nodes)} nodes and {len(edges)} road segments extracted.")
     ox.plot_graph(graph)
     
 if __name__ == "__main__":
