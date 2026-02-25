@@ -30,6 +30,15 @@ class Settings(BaseSettings):
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
 
     redis_url: str = "redis://localhost:6379/0"
+    queue_backend: Literal["mock", "rq"] = "mock"
+    queue_name: str = "image-processing"
+    queue_default_timeout: int = 300
+    queue_retry_max: int = 3
+    queue_retry_intervals: list[int] = Field(default_factory=lambda: [1, 3, 5])
+    queue_enqueue_max_attempts: int = 3
+    queue_enqueue_backoff_seconds: list[float] = Field(
+        default_factory=lambda: [0.0, 0.0, 0.0]
+    )
     supabase_url: str | None = None
     supabase_service_role_key: str | None = None
 
