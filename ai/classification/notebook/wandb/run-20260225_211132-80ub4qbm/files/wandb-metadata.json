@@ -1,0 +1,37 @@
+{
+  "os": "macOS-15.7.3-arm64-arm-64bit",
+  "python": "CPython 3.10.19",
+  "startedAt": "2026-02-25T13:11:32.894700Z",
+  "program": "/Users/amber/Desktop/hackathon/disaster-readiness/ai/classification/notebook/classification_model.ipynb",
+  "codePath": "/Users/amber/Desktop/hackathon/disaster-readiness/ai/classification/notebook/classification_model.ipynb",
+  "codePathLocal": "classification_model.ipynb",
+  "git": {
+    "remote": "git@github.com:deettoh/disaster-readiness.git",
+    "commit": "9cefc1c604532dafc69c0c0ec258406be53bfcc6"
+  },
+  "email": "amberchee2004@gmail.com",
+  "root": "/Users/amber/Desktop/hackathon/disaster-readiness/ai/classification/notebook",
+  "host": "Ambers-MacBook-Air.local",
+  "executable": "/Users/amber/miniconda3/envs/tf310/bin/python",
+  "cpu_count": 10,
+  "cpu_count_logical": 10,
+  "disk": {
+    "/": {
+      "total": "494384795648",
+      "used": "166835027968"
+    }
+  },
+  "memory": {
+    "total": "17179869184"
+  },
+  "apple": {
+    "name": "Apple M4",
+    "ecpuCores": 6,
+    "pcpuCores": 4,
+    "gpuCores": 10,
+    "memoryGb": 16,
+    "swapTotalBytes": "5368709120",
+    "ramTotalBytes": "17179869184"
+  },
+  "writerId": "0gm89c9ift01seqw9sh6bylm42rpgm1l"
+}

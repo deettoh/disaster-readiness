@@ -1,0 +1,66 @@
+Using Apple MPS GPU
+Classes:  ['fire', 'flood', 'landslide', 'normal']
+Total Images:  2110
+Classes: ['fire', 'flood', 'landslide', 'normal']
+/Users/amber/miniconda3/envs/tf310/lib/python3.10/site-packages/torchvision/models/_utils.py:208: UserWarning: The parameter 'pretrained' is deprecated since 0.13 and may be removed in the future, please use 'weights' instead.
+  warnings.warn(
+/Users/amber/miniconda3/envs/tf310/lib/python3.10/site-packages/torchvision/models/_utils.py:223: UserWarning: Arguments other than a weight enum or `None` for 'weights' are deprecated since 0.13 and may be removed in the future. The current behavior is equivalent to passing `weights=EfficientNet_B0_Weights.IMAGENET1K_V1`. You can also use `weights=EfficientNet_B0_Weights.DEFAULT` to get the most up-to-date weights.
+  warnings.warn(msg)
+Epoch 1/30 | Train Acc: 0.9076 | Train Loss: 0.2881 | Val Loss: 0.1519 | Val Acc: 0.9573
+Best model saved
+Epoch 2/30 | Train Acc: 0.9502 | Train Loss: 0.1470 | Val Loss: 0.1374 | Val Acc: 0.9526
+Best model saved
+Epoch 3/30 | Train Acc: 0.9633 | Train Loss: 0.1099 | Val Loss: 0.0898 | Val Acc: 0.9810
+Best model saved
+Epoch 4/30 | Train Acc: 0.9828 | Train Loss: 0.0691 | Val Loss: 0.0963 | Val Acc: 0.9668
+No improvement (1/5)
+Epoch 5/30 | Train Acc: 0.9781 | Train Loss: 0.0787 | Val Loss: 0.1159 | Val Acc: 0.9716
+No improvement (2/5)
+Epoch 6/30 | Train Acc: 0.9805 | Train Loss: 0.0636 | Val Loss: 0.0946 | Val Acc: 0.9763
+No improvement (3/5)
+Epoch 7/30 | Train Acc: 0.9870 | Train Loss: 0.0408 | Val Loss: 0.1169 | Val Acc: 0.9716
+No improvement (4/5)
+Epoch 8/30 | Train Acc: 0.9858 | Train Loss: 0.0383 | Val Loss: 0.0881 | Val Acc: 0.9858
+Best model saved
+Epoch 9/30 | Train Acc: 0.9905 | Train Loss: 0.0314 | Val Loss: 0.1825 | Val Acc: 0.9526
+No improvement (1/5)
+Epoch 10/30 | Train Acc: 0.9870 | Train Loss: 0.0472 | Val Loss: 0.2065 | Val Acc: 0.9573
+No improvement (2/5)
+Epoch 11/30 | Train Acc: 0.9781 | Train Loss: 0.0638 | Val Loss: 0.1234 | Val Acc: 0.9668
+No improvement (3/5)
+Epoch 12/30 | Train Acc: 0.9887 | Train Loss: 0.0368 | Val Loss: 0.0982 | Val Acc: 0.9716
+No improvement (4/5)
+Epoch 13/30 | Train Acc: 0.9899 | Train Loss: 0.0290 | Val Loss: 0.0791 | Val Acc: 0.9763
+Best model saved
+Epoch 14/30 | Train Acc: 0.9840 | Train Loss: 0.0497 | Val Loss: 0.1033 | Val Acc: 0.9668
+No improvement (1/5)
+Epoch 15/30 | Train Acc: 0.9935 | Train Loss: 0.0271 | Val Loss: 0.2267 | Val Acc: 0.9384
+No improvement (2/5)
+Epoch 16/30 | Train Acc: 0.9970 | Train Loss: 0.0128 | Val Loss: 0.0885 | Val Acc: 0.9810
+No improvement (3/5)
+Epoch 17/30 | Train Acc: 0.9935 | Train Loss: 0.0291 | Val Loss: 0.0652 | Val Acc: 0.9858
+Best model saved
+Epoch 18/30 | Train Acc: 0.9976 | Train Loss: 0.0077 | Val Loss: 0.1137 | Val Acc: 0.9763
+No improvement (1/5)
+Epoch 19/30 | Train Acc: 0.9905 | Train Loss: 0.0243 | Val Loss: 0.0960 | Val Acc: 0.9858
+No improvement (2/5)
+Epoch 20/30 | Train Acc: 0.9899 | Train Loss: 0.0339 | Val Loss: 0.0992 | Val Acc: 0.9716
+No improvement (3/5)
+Epoch 21/30 | Train Acc: 0.9953 | Train Loss: 0.0223 | Val Loss: 0.0704 | Val Acc: 0.9858
+No improvement (4/5)
+Epoch 22/30 | Train Acc: 0.9929 | Train Loss: 0.0192 | Val Loss: 0.0548 | Val Acc: 0.9905
+Best model saved
+Epoch 23/30 | Train Acc: 0.9970 | Train Loss: 0.0122 | Val Loss: 0.0704 | Val Acc: 0.9763
+No improvement (1/5)
+Epoch 24/30 | Train Acc: 0.9959 | Train Loss: 0.0144 | Val Loss: 0.1439 | Val Acc: 0.9763
+No improvement (2/5)
+Epoch 25/30 | Train Acc: 0.9929 | Train Loss: 0.0236 | Val Loss: 0.1534 | Val Acc: 0.9621
+No improvement (3/5)
+Epoch 26/30 | Train Acc: 0.9917 | Train Loss: 0.0311 | Val Loss: 0.1182 | Val Acc: 0.9763
+No improvement (4/5)
+Epoch 27/30 | Train Acc: 0.9947 | Train Loss: 0.0201 | Val Loss: 0.0598 | Val Acc: 0.9905
+No improvement (5/5)
+Early stop at epoch 27
+Path exists: False
+Path exists: False
+Path exists: True
