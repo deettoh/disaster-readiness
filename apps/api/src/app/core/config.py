@@ -39,6 +39,12 @@ class Settings(BaseSettings):
     queue_enqueue_backoff_seconds: list[float] = Field(
         default_factory=lambda: [0.0, 0.0, 0.0]
     )
+    upload_allowed_content_types: list[str] = Field(
+        default_factory=lambda: ["image/jpeg", "image/png", "image/webp"]
+    )
+    upload_max_size_bytes: int = 10 * 1024 * 1024
+    rate_limit_reports_per_minute: int = 20
+    rate_limit_report_images_per_minute: int = 30
     supabase_url: str | None = None
     supabase_service_role_key: str | None = None
 
