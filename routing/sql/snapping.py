@@ -1,6 +1,5 @@
 from sqlalchemy import create_engine, text
 
-# --- CONFIGURATION ---
 DATABASE_URL = "postgresql://postgres:root@localhost:5432/routing_db"
 
 def get_nearest_node(engine, lon, lat, label="Point"):
