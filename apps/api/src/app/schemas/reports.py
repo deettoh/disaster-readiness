@@ -39,3 +39,22 @@ class ReportImageUploadResponse(BaseModel):
     status: Literal["processing"] = "processing"
     job_id: str
     uploaded_at: datetime
+    attempt_count: int = Field(ge=1)
+
+
+class ReportStatusResponse(BaseModel):
+    """Report processing status payload."""
+
+    report_id: UUID
+    status: Literal["processing", "complete", "failed"]
+    job_id: str | None = None
+    error: str | None = None
+    attempt_count: int = Field(default=0, ge=0)
+    updated_at: datetime
+
+
+class ReportProcessingResultRequest(BaseModel):
+    """Worker callback payload for report processing result."""
+
+    status: Literal["complete", "failed"]
+    error: str | None = None
