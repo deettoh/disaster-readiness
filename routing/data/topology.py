@@ -20,7 +20,6 @@ def build_topology():
         conn.commit()
 
     # 3. Build Vertex Table Manually (The Manual Fallback)
-    # This creates the list of unique nodes and their locations
     print("Generating pj_roads_vertices_pgr manually...")
     manual_vertex_sql = """
         CREATE TABLE pj_roads_vertices_pgr AS

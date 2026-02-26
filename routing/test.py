@@ -1,58 +1,93 @@
+import sqlalchemy
 from sqlalchemy import create_engine, text
 
-# --- CONFIGURATION ---
-DATABASE_URL = "postgresql://postgres:root@localhost:5432/routing_db"
+DB_URL = "postgresql://postgres:root@localhost:5432/routing_db"
 
-def verify_routing_logic():
-    engine = create_engine(DATABASE_URL)
+def validate_routing_graph():
+    engine = create_engine(DB_URL)
     
     with engine.connect() as conn:
-        print("--- VERIFYING PGROUTING CONNECTIVITY ---")
-
-        # 1. Pick two actual NON-NULL nodes from your dataset
-        # We explicitly filter for NOT NULL to avoid the 'None' subscript error
-        nodes_query = text("""
+        print("🔍 Starting Graph Validation Suite...\n")
+        
+        # --- 1. INTEGRITY CHECK: MATH & LOGIC ---
+        integrity_sql = """
             SELECT 
-                (SELECT source FROM pj_roads WHERE source IS NOT NULL LIMIT 1) as start_node,
-                (SELECT target FROM pj_roads WHERE target IS NOT NULL OFFSET 100 LIMIT 1) as end_node
-        """)
+                COUNT(*) FILTER (WHERE ABS(agg_cost - (base_cost + risk_penalty)) > 0.001) as math_errors,
+                COUNT(*) FILTER (WHERE oneway IN ('yes', 'true', '1') AND agg_reverse_cost != -1) as oneway_errors,
+                COUNT(*) FILTER (WHERE agg_cost <= 0) as zero_cost_errors,
+                COUNT(*) FILTER (WHERE risk_penalty IS NULL) as null_risk_errors
+            FROM pj_roads;
+        """
         
-        result = conn.execute(nodes_query).fetchone()
-        
-        # Safety check: ensure result and its elements exist
-        if result is None or result[0] is None or result[1] is None:
-            print("❌ ERROR: Could not find valid source/target nodes. Is the table empty?")
-            return
-            
-        start_node = result[0]
-        end_node = result[1]
-        
-        print(f"Attempting to route from Node {start_node} to Node {end_node}...")
-
-        # 2. Run pgr_dijkstra
-        # Using directed := false to allow two-way travel on all roads for this test
-        query = text(f"""
-            SELECT * FROM pgr_dijkstra(
-                'SELECT id, source, target, cost FROM pj_roads',
-                {start_node}, 
-                {end_node}, 
-                false
-            );
-        """)
-
         try:
-            path = conn.execute(query).fetchall()
+            res = conn.execute(text(integrity_sql)).fetchone()
             
-            if path and len(path) > 0:
-                total_cost = sum(row.cost for row in path if row.cost is not None)
-                print(f"\n✅ SUCCESS!")
-                print(f"Path found! It took {len(path)} road segments.")
-                print(f"Total distance (cost): {round(total_cost, 2)} units.")
+            # Defensive check: Only try to subscript if res is NOT None
+            if res is not None:
+                math_err = res[0] if res[0] is not None else 0
+                ow_err   = res[1] if res[1] is not None else 0
+                zero_err = res[2] if res[2] is not None else 0
+                null_err = res[3] if res[3] is not None else 0
             else:
-                print("\n❌ FAILED: No path found between those two specific nodes.")
-                
+                # Fallback defaults if the query returned nothing
+                math_err = ow_err = zero_err = null_err = 0
+
+            print("--- [1] Logic & Integrity Check ---")
+            print(f"{'Success' if math_err == 0 else 'Error'} Math Consistency: {math_err} errors")
+            print(f"{'Success' if ow_err == 0 else 'Error'} One-Way Logic: {ow_err} errors")
+            print(f"{'Success' if zero_err == 0 else 'Error'} Zero/Negative Costs: {zero_err} errors")
+            print(f"{'Success' if null_err == 0 else 'Error'} Task 5 (Risk Init): {null_err} nulls")
+        
         except Exception as e:
-            print(f"\n❌ ERROR during routing execution: {e}")
+            print(f"Integrity Query Failed: {e}")
+
+        # --- 2. SAMPLE AUDIT ---
+        print("\n--- [2] Data Sample Audit ---")
+        try:
+            samples = conn.execute(text("""
+                SELECT COALESCE(name, 'Unnamed Road'), highway, 
+                       round(base_cost::numeric, 2), risk_penalty, round(agg_cost::numeric, 2)
+                FROM pj_roads 
+                WHERE base_cost IS NOT NULL 
+                LIMIT 5;
+            """)).fetchall()
+            
+            if not samples:
+                print("⚠️ No road samples found. Check if pj_roads table has data.")
+            else:
+                for s in samples:
+                    print(f" • {s[0]} ({s[1]}): Base {s[2]}s + Risk {s[3]} = Total {s[4]}s")
+        except Exception as e:
+            print(f"Sample Audit Failed: {e}")
+
+        # --- 3. FUNCTIONAL TEST: PGROUTING DIJKSTRA ---
+        print("\n--- [3] Functional Connectivity Test ---")
+        try:
+            nodes_res = conn.execute(text("SELECT id FROM pj_roads_vertices_pgr LIMIT 2;")).fetchall()
+            
+            if not nodes_res or len(nodes_res) < 2:
+                print("Not enough nodes found in pj_roads_vertices_pgr to test routing.")
+            else:
+                start_id = nodes_res[0][0]
+                end_id = nodes_res[1][0]
+                
+                pgr_sql = f"""
+                    SELECT seq, node, edge, cost 
+                    FROM pgr_dijkstra(
+                        'SELECT id, source, target, agg_cost AS cost, agg_reverse_cost AS reverse_cost FROM pj_roads',
+                        {start_id}, {end_id}, directed := true
+                    );
+                """
+                route = conn.execute(text(pgr_sql)).fetchall()
+                
+                if route:
+                    print(f"Success! pgRouting found a path between Node {start_id} and {end_id}.")
+                    print(f"Path Length: {len(route)} segments.")
+                else:
+                    print(f"Path not found between {start_id} and {end_id}. (Roads might be disconnected).")
+
+        except Exception as e:
+            print(f"pgRouting Test Failed: {e}")
 
 if __name__ == "__main__":
-    verify_routing_logic()
+    validate_routing_graph()
