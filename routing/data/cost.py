@@ -3,6 +3,8 @@ from sqlalchemy import create_engine, text
 DATABASE_URL = "postgresql://postgres:root@localhost:5432/routing_db"
 
 def compute_and_initialize_costs():
+    """ Calculates travel times (base_cost), initializes risk penalties to 0, and totals them into an aggregate cost column. """
+    
     engine = create_engine(DATABASE_URL)
     
     # SCHEMA SETUP 
@@ -58,7 +60,7 @@ def compute_and_initialize_costs():
             conn.execute(text(index_sql))
             conn.commit()
             
-            # --- SAFE VERIFICATION (Fixes the Subscriptable Error) ---
+            # --- SAFE VERIFICATION ---
             check_res = conn.execute(text("SELECT COUNT(*) FROM pj_roads WHERE agg_cost IS NULL;")).fetchone()
             null_count = check_res[0] if check_res else 0
 
@@ -73,7 +75,6 @@ def compute_and_initialize_costs():
                     FROM pj_roads;
                 """)).fetchone()
 
-                # Robust extraction: check if stats_res exists and indices are not None
                 if stats_res:
                     avg_base = stats_res[0] if stats_res[0] is not None else 0
                     avg_risk = stats_res[1] if stats_res[1] is not None else 0

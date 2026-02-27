@@ -3,6 +3,8 @@ from sqlalchemy import create_engine, text
 DATABASE_URL = "postgresql://postgres:root@localhost:5432/routing_db"
 
 def build_topology():
+    """Sets up the road network topology and generates a junction-aware vertex table."""
+    
     engine = create_engine(DATABASE_URL)
     
     # Prepare Columns
@@ -32,7 +34,6 @@ def build_topology():
         SELECT 
             c.node_id AS id, 
             c.actual_cnt AS cnt,
-            -- Use the geometry from the roads table to position the vertex
             (SELECT ST_StartPoint(geometry) FROM pj_roads WHERE source = c.node_id LIMIT 1) as the_geom
         FROM counts c;
         

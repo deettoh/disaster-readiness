@@ -10,8 +10,8 @@ DB_NAME = "routing_db"
 
 DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
-# For validation
 def visualize_full_map():
+    """Loads road data from PostGIS and generates a color-coded map image."""
     # Create the connection
     engine = create_engine(DATABASE_URL)
 
@@ -25,7 +25,7 @@ def visualize_full_map():
 
     print(f"Loaded {len(gdf)} road segments.")
 
-    # 3. Create the Visualization
+    # Create the Visualization
     fig, ax = plt.subplots(figsize=(12, 12))
     
     print("Rendering map...")

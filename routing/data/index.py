@@ -9,6 +9,8 @@ DB_NAME = "routing_db"
 DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
 def apply_routing_indexes():
+    """Creates indexes on road tables and verifies they are active."""
+    
     engine = create_engine(DATABASE_URL)
     
     # Define Index Queries

@@ -3,6 +3,8 @@ from sqlalchemy import create_engine, text
 DATABASE_URL = "postgresql://postgres:root@localhost:5432/routing_db"
 
 def run_sanity_checks():
+    """Checks for broken road links, analyzes junctions, and runs a test route."""
+
     engine = create_engine(DATABASE_URL)
     print("--- Graph Connectivity & Integrity Analysis ---")
 
@@ -35,7 +37,6 @@ def run_sanity_checks():
     # [3/3] RANDOMIZED DIJKSTRA VERIFICATION
     print("\n[3/3] Performing Randomized Pathfinding Test...")
     
-    # Selecting two random nodes to ensure different tests on every run
     random_test_query = """
         WITH random_nodes AS (
             SELECT id FROM pj_roads_vertices_pgr ORDER BY RANDOM() LIMIT 2
@@ -67,19 +68,17 @@ def run_sanity_checks():
                 start_n = route_res[2]
                 end_n = route_res[3]
                 
-                # Calculate speed to check for "9.5 hour" anomalies
                 avg_speed = (dist_km / (time_sec / 3600)) if time_sec > 0 else 0
 
                 print(f"Dijkstra calculation successful!")
                 print(f"-----------------------------------")
-                print(f"Path:      Node {start_n} ➔ {end_n}")
+                print(f"Path:    Node {start_n} ➔ {end_n}")
                 print(f"Distance:  {dist_km:.2f} km")
                 print(f"Time:      {round(time_sec, 2)}s ({round(time_sec/60, 2)} mins)")
                 print(f"Avg Speed: {round(avg_speed, 2)} km/h")
                 print(f"-----------------------------------")
             else:
-                print("No path found between these random nodes (Standard for disconnected clusters).")
-                print("Hint: Run the script again to test a different pair!")
+                print("No path found between these random nodes.")
                 
         except Exception as e:
             print(f"Pathfinding logic failed: {e}")

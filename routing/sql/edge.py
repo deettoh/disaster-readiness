@@ -4,10 +4,8 @@ from sqlalchemy import create_engine, text
 DATABASE_URL = "postgresql://postgres:root@localhost:5432/routing_db"
 
 def get_node_id(conn, lon, lat):
-    """
-    Tries to find the nearest node within a 1km radius.
-    If the point is too far from any road, it returns None.
-    """
+    """Attempts to find the nearest node ID within 1km of the coordinates."""
+
     snap_sql = """
         SELECT id, 
                ST_Distance(the_geom::geography, ST_SetSRID(ST_Point(:lon, :lat), 4326)::geography) as dist
@@ -20,6 +18,8 @@ def get_node_id(conn, lon, lat):
     return res[0] if res else None
 
 def test_route_logic(start_coords, end_coords, label):
+    """Tests the routing engine against edge cases such as out-of-bounds points, identical locations, and disconnected roads."""
+
     engine = create_engine(DATABASE_URL)
     print(f"--- Testing Case: {label} ---")
     
@@ -63,13 +63,11 @@ def test_route_logic(start_coords, end_coords, label):
     print("-" * 50)
 
 if __name__ == "__main__":
-    # Case A: Point far away from PJ (e.g., Middle of the Ocean)
-    # Expected: Snapping failure
+    # Case A: Out-of-Bounds
     test_route_logic((0.0, 0.0), (101.609, 3.155), "Out-of-Bounds Point")
 
     # Case B: Identical coordinates
-    # Expected: Immediate zero-cost return
     test_route_logic((101.609, 3.155), (101.609, 3.155), "Same Start/End Point")
 
-    # Case C: Valid snapping but disconnected island (Simulated with high/low node IDs if known)
+    # Case C: Valid route check
     test_route_logic((101.609, 3.155), (101.645, 3.100), "Valid Route Check")

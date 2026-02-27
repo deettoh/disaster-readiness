@@ -4,7 +4,8 @@ import json
 DATABASE_URL = "postgresql://postgres:root@localhost:5432/routing_db"
 
 def get_node_id(conn, lon, lat):
-    """Internal helper to snap coordinates to the nearest node ID."""
+    """Finds the nearest road network node ID for a pair of coordinates."""
+
     snap_sql = """
         SELECT id FROM pj_roads_vertices_pgr
         ORDER BY the_geom <-> ST_SetSRID(ST_Point(:lon, :lat), 4326)
@@ -14,6 +15,8 @@ def get_node_id(conn, lon, lat):
     return res[0] if res else None
 
 def run_route(start_coords, end_coords, algorithm="dijkstra"):
+    """Executes a pathfinding query (Dijkstra or A*) and returns the travel time and geometry."""
+    
     engine = create_engine(DATABASE_URL)
     
     with engine.connect() as conn:
@@ -83,5 +86,5 @@ if __name__ == "__main__":
     # Run Dijkstra
     route_data = run_route(START, END, algorithm="dijkstra")
     
-    # Run A* (Check for performance or consistency)
+    # Run A*
     route_data_astar = run_route(START, END, algorithm="astar")

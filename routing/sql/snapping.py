@@ -1,12 +1,11 @@
+import random
 from sqlalchemy import create_engine, text
 
 DATABASE_URL = "postgresql://postgres:root@localhost:5432/routing_db"
 
 def get_nearest_node(engine, lon, lat, label="Point"):
-    """
-    Finds the closest vertex ID in the road network for a given lon, lat.
-    Uses the <-> operator for index-assisted nearest neighbor search.
-    """
+    """Snaps coordinates to the closest road node ID."""
+
     query = """
         SELECT 
             id, 
@@ -23,30 +22,43 @@ def get_nearest_node(engine, lon, lat, label="Point"):
         
         if result:
             node_id, n_lon, n_lat, dist = result
-            print(f"{label} ({lat}, {lon}) snapped to Node {node_id}")
+            print(f"{label} ({lat:.6f}, {lon:.6f}) snapped to Node {node_id}")
             print(f"Distance: {round(dist, 2)} meters away.")
             return node_id
-        else:
-            print(f"Could not find a nearby node for {label}.")
-            return None
+        return None
 
-# Verification
-def verify_c2_tasks():
+def verify_snapping_tasks():
+    """Picks nodes, adds a random offset, and verifies snapping and routing."""
+    
     engine = create_engine(DATABASE_URL)
     
-    print("--- C2: Route Query Engine (Snapping Verification) ---")
+    print("--- Route Query Engine (Random Snapping Verification) ---")
     
-    # Start Point Snapping (Example: A point in Mutiara Damansara)
-    start_lon, start_lat = 101.609, 3.155 
+    # Fetch random coordinates from existing nodes
+    random_coords_query = "SELECT ST_X(the_geom), ST_Y(the_geom) FROM pj_roads_vertices_pgr ORDER BY random() LIMIT 2;"
+    
+    with engine.connect() as conn:
+        coords = conn.execute(text(random_coords_query)).fetchall()
+        
+    if len(coords) < 2:
+        return
+
+    # Add a small random offset (approx 50-100 meters) to simulate real-world input
+    def jitter(val):
+        return val + random.uniform(-0.0005, 0.0005)
+
+    start_lon, start_lat = jitter(coords[0][0]), jitter(coords[0][1])
+    shelter_lon, shelter_lat = jitter(coords[1][0]), jitter(coords[1][1])
+
+    # Start Point Snapping
     start_node = get_nearest_node(engine, start_lon, start_lat, "Start Point")
     
     print("-" * 30)
     
-    # End Point/Shelter Snapping (Example: A point near PJ State)
-    shelter_lon, shelter_lat = 101.645, 3.100
+    # End Point/Shelter Snapping
     end_node = get_nearest_node(engine, shelter_lon, shelter_lat, "Shelter/End Point")
     
-    # Final Verification: Can we route between them?
+    # Final Verification
     if start_node and end_node:
         print("\nVerification: Snapping IDs are valid for routing.")
         routing_test = """
@@ -61,7 +73,7 @@ def verify_c2_tasks():
             if res and res[0] > 0:
                 print(f"Success! A path exists between snapped nodes {start_node} and {end_node}.")
             else:
-                print("Snapping worked, but no path exists between these specific points.")
+                print("Snapping worked, but no path exists between these points.")
 
 if __name__ == "__main__":
-    verify_c2_tasks()
+    verify_snapping_tasks()
