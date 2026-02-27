@@ -1,3 +1,5 @@
+"""Calculates base costs, initializes risk penalties, and populates aggregated cost."""
+
 from sqlalchemy import create_engine, text
 
 DATABASE_URL = "postgresql://postgres:root@localhost:5432/routing_db"

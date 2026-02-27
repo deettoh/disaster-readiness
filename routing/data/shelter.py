@@ -1,3 +1,5 @@
+"""Prepare a shelter location file."""
+
 import osmnx as ox
 import pandas as pd
 import warnings
@@ -51,7 +53,6 @@ def download_safe_shelters():
         print("-" * 60)
         print(df[['name', 'lon', 'lat']].to_string())
         print("-" * 60)
-        print("Note: These locations are government community halls, typically used as PPS.")
         
     except Exception as e:
         print(f"Error fetching shelters: {e}")

@@ -1,3 +1,5 @@
+"""Provides geometric 'snapping' logic for start points and end points."""
+
 import random
 from sqlalchemy import create_engine, text
 

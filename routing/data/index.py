@@ -1,3 +1,5 @@
+"""Applies spatial and relational indexes to the road and vertex tables to optimize routing performance."""
+
 from sqlalchemy import create_engine, text
 
 DB_USER = "postgres"

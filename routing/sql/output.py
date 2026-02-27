@@ -1,3 +1,5 @@
+"""Generates randomized route geometries output in GeoJSON format as well as distance/ETA output."""
+
 import json
 from sqlalchemy import create_engine, text
 

@@ -1,75 +1,106 @@
-from pydantic import BaseModel, Field, field_validator
-from typing import List, Optional, Tuple
+"""Provides a standardized query contract that returns distance, ETA, and GeoJSON geometries for any PJ coordinate pair."""
 
-# --- INPUT CONTRACT ---
-# This defines exactly what Member A must send to the routing engine.
-class RouteRequest(BaseModel):
-    # Field(...) indicates a required field. 
-    # 'examples' provides metadata for documentation (FastAPI/Swagger).
-    start_coords: Tuple[float, float] = Field(
-        ..., 
-        examples=[(101.609, 3.155)],
-        description="Longitude and Latitude of the starting point"
-    )
-    end_coords: Tuple[float, float] = Field(
-        ..., 
-        examples=[(101.645, 3.100)],
-        description="Longitude and Latitude of the destination"
-    )
-    algorithm: str = Field(
-        default="dijkstra", 
-        description="The pathfinding algorithm to use: 'dijkstra' or 'astar'"
-    )
+from sqlalchemy import create_engine, text
+import json
 
-    @field_validator('start_coords', 'end_coords')
-    @classmethod
-    def validate_malaysia_bounds(cls, v: Tuple[float, float]) -> Tuple[float, float]:
-        lon, lat = v
-        # Bounding box for the Petaling Jaya extract
-        if not (101.0 <= lon <= 102.0 and 2.5 <= lat <= 4.0):
-            raise ValueError("Coordinates are outside the supported Petaling Jaya region")
-        return v
+DATABASE_URL = "postgresql://postgres:root@localhost:5432/routing_db"
 
-# --- OUTPUT CONTRACT ---
-# This defines the "promise" of what Member C returns to Member A.
-class RouteMetrics(BaseModel):
-    distance_km: float
-    eta_minutes: float
-    segment_count: int
+def get_route(start_lat, start_lon, end_lat, end_lon, algorithm="dijkstra"):
+    """
+    Official Routing Query Contract (For Member A)
 
-class GeoJSONFeature(BaseModel):
-    type: str = "Feature"
-    geometry: dict  # Should contain a LineString
-    properties: dict
+    Input:
+        start_lat, start_lon
+        end_lat, end_lon
+        algorithm: "dijkstra" or "astar"
 
-class RouteResponse(BaseModel):
-    status: str = Field(..., examples=["success"])
-    message: Optional[str] = None
-    data: Optional[RouteMetrics] = None
-    geojson: Optional[GeoJSONFeature] = None
+    Returns:
+        {
+            "status": "success" | "error",
+            "distance_km": float,
+            "eta_minutes": float,
+            "geojson": {...}
+        }
+    """
 
-# --- ERROR CONTRACT ---
-# Edge cases (Out of bounds, No path, etc.)
-class RouteError(BaseModel):
-    status: str = "error"
-    error_code: str  
-    message: str
+    engine = create_engine(DATABASE_URL)
 
-if __name__ == "__main__":
-    # Internal test to verify the contract logic
-    try:
-        # Test 1: Valid request
-        valid_req = RouteRequest(
-            start_coords=(101.609, 3.155),
-            end_coords=(101.615, 3.160)
-        )
-        print("Contract Validation Success: Valid coordinates accepted.")
-        
-        # Test 2: Invalid request (Out of bounds)
-        print("Testing Out of Bounds (London)...")
-        invalid_req = RouteRequest(
-            start_coords=(-0.127, 51.507), 
-            end_coords=(101.645, 3.100)
-        )
-    except ValueError as e:
-        print(f"Contract Validation Success: Caught expected error: {e}")
+    with engine.connect() as conn:
+
+        # Snap Start Node
+        snap_sql = """
+            SELECT id FROM pj_roads_vertices_pgr
+            ORDER BY the_geom <-> ST_SetSRID(ST_Point(:lon, :lat), 4326)
+            LIMIT 1;
+        """
+
+        start_node = conn.execute(
+            text(snap_sql),
+            {"lon": start_lon, "lat": start_lat}
+        ).fetchone()
+
+        end_node = conn.execute(
+            text(snap_sql),
+            {"lon": end_lon, "lat": end_lat}
+        ).fetchone()
+
+        if not start_node or not end_node:
+            return {"status": "error", "message": "Could not snap coordinates."}
+
+        start_node = start_node[0]
+        end_node = end_node[0]
+
+        if start_node == end_node:
+            return {
+                "status": "success",
+                "distance_km": 0,
+                "eta_minutes": 0,
+                "geojson": None
+            }
+
+        # Routing Query
+        routing_sql = f"""
+            WITH path AS (
+                SELECT * FROM pgr_{algorithm}(
+                    'SELECT id, source, target, agg_cost AS cost, agg_reverse_cost AS reverse_cost FROM pj_roads',
+                    :start, :end, directed := true
+                )
+            ),
+            route_segments AS (
+                SELECT p.seq, r.length, r.agg_cost, r.geometry
+                FROM path p
+                JOIN pj_roads r ON p.edge = r.id
+                ORDER BY p.seq
+            )
+            SELECT
+                SUM(length) as total_dist_m,
+                SUM(agg_cost) as total_time_s,
+                ST_AsGeoJSON(ST_LineMerge(ST_Collect(geometry))) as geojson_geom
+            FROM route_segments;
+        """
+
+        result = conn.execute(
+            text(routing_sql),
+            {"start": start_node, "end": end_node}
+        ).fetchone()
+
+        if not result or result[2] is None:
+            return {"status": "error", "message": "No route found."}
+
+        total_dist_m = result[0]
+        total_time_s = result[1]
+        geojson_geom = json.loads(result[2])
+
+        return {
+            "status": "success",
+            "distance_km": round(total_dist_m / 1000, 2),
+            "eta_minutes": round(total_time_s / 60, 2),
+            "geojson": {
+                "type": "Feature",
+                "geometry": geojson_geom,
+                "properties": {
+                    "source": start_node,
+                    "target": end_node
+                }
+            }
+        }

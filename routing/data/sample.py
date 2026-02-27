@@ -1,3 +1,5 @@
+"""Generates structured JSON sample test cases representing realistic disaster evacuation scenarios across Petaling Jaya."""
+
 import json
 import os
 
@@ -53,9 +55,9 @@ def generate_pj_test_cases():
         print("\n--- Summary of Test Pairs ---")
         for s in scenarios:
             print(f"[{s['name']}]")
-            print(f"  Start: {s['start_point']['lon']}, {s['start_point']['lat']}")
-            print(f"  End:   {s['end_point']['lon']}, {s['end_point']['lat']}")
-            print(f"  Goal:  {s['description']}\n")
+            print(f"   Start: {s['start_point']['lon']}, {s['start_point']['lat']}")
+            print(f"   End:   {s['end_point']['lon']}, {s['end_point']['lat']}")
+            print(f"   Goal:  {s['description']}\n")
 
     except Exception as e:
         print(f"Error saving file: {e}")

@@ -1,3 +1,5 @@
+"""Fetches road geometries from PostGIS and generates a map visualization of Petaling Jaya."""
+
 import geopandas as gpd
 from sqlalchemy import create_engine
 import matplotlib.pyplot as plt

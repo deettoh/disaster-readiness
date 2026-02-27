@@ -1,3 +1,5 @@
+"""Tests the routing engine against edge cases like out-of-bounds coordinates and identical start/end points."""
+
 import json
 from sqlalchemy import create_engine, text
 

@@ -1,3 +1,5 @@
+"""Provides a pathfinding query to compute optimal paths using Dijkstra and A* algorithms via pgRouting."""
+
 from sqlalchemy import create_engine, text
 import json
 
@@ -6,6 +8,7 @@ DATABASE_URL = "postgresql://postgres:root@localhost:5432/routing_db"
 def get_node_id(conn, lon, lat):
     """Finds the nearest road network node ID for a pair of coordinates."""
 
+    # Using the KNN operator <-> for high-performance spatial indexing
     snap_sql = """
         SELECT id FROM pj_roads_vertices_pgr
         ORDER BY the_geom <-> ST_SetSRID(ST_Point(:lon, :lat), 4326)

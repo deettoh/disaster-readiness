@@ -1,3 +1,5 @@
+"""Builds the pgRouting topology by creating source/target columns and a vertex table for the PJ road network."""
+
 from sqlalchemy import create_engine, text
 
 DATABASE_URL = "postgresql://postgres:root@localhost:5432/routing_db"
