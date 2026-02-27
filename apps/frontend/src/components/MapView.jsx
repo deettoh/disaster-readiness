@@ -2,10 +2,10 @@ import { useEffect, useRef } from "react";
 import { MAPTILER_KEY } from "../api/config";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+
 /**
  * MapView component initializes and renders the map using MapLibre GL JS.
  */
-
 export default function MapView() {
   const mapContainer = useRef(null);
 
@@ -17,7 +17,7 @@ export default function MapView() {
       zoom: 12,
     });
 
-    return () => map.remove();  
+    return () => map.remove();  // cleanup: destroy map instance on unmount
   }, []);
 
   return <div ref={mapContainer} className="w-full h-full" />;
