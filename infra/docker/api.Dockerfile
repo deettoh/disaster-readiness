@@ -1,3 +1,5 @@
+# Backend Dockerfile for FastAPI Application
+
 FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \

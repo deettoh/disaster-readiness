@@ -1,3 +1,5 @@
+# Worker Dockerfile for RQ background job processing.
+
 FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
