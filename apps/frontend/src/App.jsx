@@ -1,9 +1,10 @@
 import MapView from "./components/MapView";
 
+/**
+ * Main entry point of the application.
+ * Overall layout: nav bar, full-screen map, and desktop side panel.
+ */
 export default function App() {
-  /**
-   * App component serves as the main entry point of the application, structuring the layout and integrating the MapView component. It includes a header for navigation, a main content area for the map, and a floating button for reporting hazards. The layout is responsive, with a side panel that appears on larger screens to provide additional information.
-   */
   return (
     <div className="h-screen w-screen flex flex-col">
       
