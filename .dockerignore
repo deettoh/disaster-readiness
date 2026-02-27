@@ -1,0 +1,26 @@
+.git
+.gitignore
+.venv
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Node/frontend artifacts
+node_modules/
+apps/frontend/node_modules/
+apps/frontend/dist/
+
+# Local environment and editor files
+.env
+.env.*
+!.env.example
+.vscode/
+.DS_Store
+
+# Test and coverage artifacts
+coverage/
+htmlcov/
