@@ -1,55 +1,61 @@
 from sqlalchemy import create_engine, text
 
-# --- CONFIGURATION ---
 DATABASE_URL = "postgresql://postgres:root@localhost:5432/routing_db"
 
 def build_topology():
     engine = create_engine(DATABASE_URL)
     
-    # 1. Clean up old data
-    with engine.connect() as conn:
-        conn.execute(text("DROP TABLE IF EXISTS pj_roads_vertices_pgr;"))
-        conn.commit()
+    # Prepare Columns
+    print("Preparing source and target columns...")
+    setup_sql = """
+        ALTER TABLE pj_roads ADD COLUMN IF NOT EXISTS source BIGINT;
+        ALTER TABLE pj_roads ADD COLUMN IF NOT EXISTS target BIGINT;
+        UPDATE pj_roads SET source = u, target = v;
+    """
 
-    # 2. Assign Source and Target from OSM IDs (The core mapping)
-    print("Mapping source and target columns...")
-    with engine.connect() as conn:
-        conn.execute(text("ALTER TABLE pj_roads ADD COLUMN IF NOT EXISTS source BIGINT;"))
-        conn.execute(text("ALTER TABLE pj_roads ADD COLUMN IF NOT EXISTS target BIGINT;"))
-        conn.execute(text("UPDATE pj_roads SET source = u, target = v;"))
-        conn.commit()
-
-    # 3. Build Vertex Table Manually (The Manual Fallback)
-    print("Generating pj_roads_vertices_pgr manually...")
+    # Build Vertex Table 
+    print("Generating pj_roads_vertices_pgr with correct connectivity...")
     manual_vertex_sql = """
+        DROP TABLE IF EXISTS pj_roads_vertices_pgr CASCADE;
+        
         CREATE TABLE pj_roads_vertices_pgr AS
         WITH all_nodes AS (
-            SELECT source as node_id, ST_StartPoint(geometry) as geom FROM pj_roads
-            UNION
-            SELECT target as node_id, ST_EndPoint(geometry) as geom FROM pj_roads
+            SELECT source AS node_id FROM pj_roads
+            UNION ALL
+            SELECT target AS node_id FROM pj_roads
+        ),
+        counts AS (
+            SELECT node_id, COUNT(*) as actual_cnt
+            FROM all_nodes
+            GROUP BY node_id
         )
         SELECT 
-            node_id as id, 
-            ST_Centroid(ST_Collect(geom)) as the_geom,
-            count(*) as cnt
-        FROM all_nodes
-        GROUP BY node_id;
+            c.node_id AS id, 
+            c.actual_cnt AS cnt,
+            -- Use the geometry from the roads table to position the vertex
+            (SELECT ST_StartPoint(geometry) FROM pj_roads WHERE source = c.node_id LIMIT 1) as the_geom
+        FROM counts c;
+        
+        ALTER TABLE pj_roads_vertices_pgr ADD PRIMARY KEY (id);
+        CREATE INDEX IF NOT EXISTS pj_roads_vertices_geom_idx ON pj_roads_vertices_pgr USING GIST (the_geom);
     """
     
     with engine.connect() as conn:
         try:
+            conn.execute(text(setup_sql))
             conn.execute(text(manual_vertex_sql))
-            conn.execute(text("ALTER TABLE pj_roads_vertices_pgr ADD PRIMARY KEY (id);"))
             conn.commit()
-            print("✅ Vertex table created manually from OSM nodes.")
+            print("SUCCESS: Topology rebuilt with correct junction counts.")
+            
+            # Verification
+            res = conn.execute(text("SELECT cnt, count(*) FROM pj_roads_vertices_pgr GROUP BY cnt ORDER BY cnt LIMIT 5;")).fetchall()
+            print("\nConnectivity Summary:")
+            for row in res:
+                print(f" - {row[0]}-way connections: {row[1]} nodes")
+                
         except Exception as e:
-            print(f"❌ Manual creation failed: {e}")
-
-    # 4. Verification
-    with engine.connect() as conn:
-        res = conn.execute(text("SELECT count(*) FROM pj_roads_vertices_pgr;")).fetchone()
-        if res:
-            print(f"\nSUCCESS! Found {res[0]} unique intersections (nodes).")
+            conn.rollback()
+            print(f"FAILED: {e}")
 
 if __name__ == "__main__":
     build_topology()
