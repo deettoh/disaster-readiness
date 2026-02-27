@@ -1,6 +1,10 @@
 """Dependency providers for repositories/services."""
 
-from app.core.config import get_settings
+from fastapi import Depends, Request
+
+from app.core.config import Settings, get_settings
+from app.core.exceptions import RateLimitExceededError
+from app.core.rate_limit import InMemoryRateLimiter
 from app.services.interfaces import (
     AlertQueryService,
     HazardQueryService,
@@ -34,6 +38,17 @@ _status_store = MockReportStatusStore()
 _post_processing_hooks = MockPostProcessingHooks()
 _rq_queue_client: RQQueueClient | None = None
 _orchestration_service: ReportOrchestrationService | None = None
+_rate_limiter = InMemoryRateLimiter()
+
+
+def _get_client_identity(request: Request) -> str:
+    """Return client identity for per-client throttling."""
+    forwarded_for = request.headers.get("x-forwarded-for")
+    if forwarded_for:
+        return forwarded_for.split(",")[0].strip()  # Original client IP from header
+    if request.client is not None:
+        return request.client.host  # Load balancer IP
+    return "unknown"
 
 
 def get_report_repository() -> ReportRepository:
@@ -102,3 +117,46 @@ def get_orchestration_service() -> ReportOrchestrationService:
             enqueue_backoff_seconds=settings.queue_enqueue_backoff_seconds,
         )
     return _orchestration_service
+
+
+def enforce_report_create_rate_limit(
+    request: Request,
+    settings: Settings = Depends(get_settings),
+) -> None:
+    """Enforce anti-spam throttle for report creation requests."""
+    client = _get_client_identity(request)
+    allowed, retry_after = _rate_limiter.consume(
+        key=f"reports:create:{client}",
+        max_requests=settings.rate_limit_reports_per_minute,
+        window_seconds=60,
+    )
+    if not allowed:
+        raise RateLimitExceededError(
+            message="Too many report creation requests. Please retry later.",
+            retry_after_seconds=retry_after,
+            details={"endpoint": "/reports"},
+        )
+
+
+def enforce_report_image_rate_limit(
+    request: Request,
+    settings: Settings = Depends(get_settings),
+) -> None:
+    """Enforce anti-spam throttle for report image upload requests."""
+    client = _get_client_identity(request)
+    allowed, retry_after = _rate_limiter.consume(
+        key=f"reports:image:{client}",
+        max_requests=settings.rate_limit_report_images_per_minute,
+        window_seconds=60,
+    )
+    if not allowed:
+        raise RateLimitExceededError(
+            message="Too many report image uploads. Please retry later.",
+            retry_after_seconds=retry_after,
+            details={"endpoint": "/reports/{report_id}/image"},
+        )
+
+
+def reset_rate_limiter_state() -> None:
+    """Reset rate limiter state for test isolation."""
+    _rate_limiter.reset()

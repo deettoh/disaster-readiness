@@ -96,3 +96,25 @@ class ExternalServiceError(AppError):
             status_code=502,
             details={"service": service, **(details or {})},
         )
+
+
+class RateLimitExceededError(AppError):
+    """Raised when a request exceeds configured rate limits."""
+
+    def __init__(
+        self,
+        *,
+        message: str,
+        retry_after_seconds: int,
+        details: dict[str, Any] | None = None,
+    ) -> None:
+        """Initialize a 429 rate-limit response payload."""
+        super().__init__(
+            message=message,
+            error_code="RATE_LIMIT_EXCEEDED",
+            status_code=429,
+            details={
+                "retry_after_seconds": retry_after_seconds,
+                **(details or {}),
+            },
+        )
