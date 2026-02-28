@@ -1,3 +1,4 @@
+"""Define penalty mapping based on hazard type and penalty scaling based on confidence score."""
 from sqlalchemy import create_engine, text  # noqa: D100
 
 DATABASE_URL = "postgresql://postgres:root@localhost:5432/routing_db"
