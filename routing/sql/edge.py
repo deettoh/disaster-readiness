@@ -4,6 +4,7 @@ from sqlalchemy import create_engine, text
 
 DATABASE_URL = "postgresql://postgres:root@localhost:5432/routing_db"
 
+
 def get_node_id(conn, lon, lat):
     """Attempts to find the nearest node ID within 1km of the coordinates."""
     snap_sql = """
@@ -16,6 +17,7 @@ def get_node_id(conn, lon, lat):
     """
     res = conn.execute(text(snap_sql), {"lon": lon, "lat": lat}).fetchone()
     return res[0] if res else None
+
 
 def test_route_logic(start_coords, end_coords, label):
     """Tests the routing engine against edge cases such as out-of-bounds points, identical locations, and disconnected roads."""
@@ -30,13 +32,19 @@ def test_route_logic(start_coords, end_coords, label):
         if u is None or v is None:
             print("Result: [Input Error] Could not snap coordinates to network. "
                   "Points are likely outside the Petaling Jaya bounds.")
+            print(
+                "Result: [Input Error] Could not snap coordinates to network. "
+                "Points are likely outside the Petaling Jaya bounds."
+            )
             print("-" * 50)
             return
 
         # Check for Identical Points
         if u == v:
-            print(f"Result: [Zero Distance] Start and End snapped to the same node ({u}). "
-                  f"Travel time: 0s, Distance: 0m.")
+            print(
+                f"Result: [Zero Distance] Start and End snapped to the same node ({u}). "
+                f"Travel time: 0s, Distance: 0m."
+            )
             print("-" * 50)
             return
 
@@ -54,12 +62,15 @@ def test_route_logic(start_coords, end_coords, label):
             if res and res[0] > 0:
                 print(f"Result: [Success] Path found between Node {u} and Node {v}.")
             else:
-                print(f"Result: [Routing Error] No path exists between Node {u} and Node {v}. "
-                      f"The nodes are in disconnected components of the road graph.")
+                print(
+                    f"Result: [Routing Error] No path exists between Node {u} and Node {v}. "
+                    f"The nodes are in disconnected components of the road graph."
+                )
         except Exception as e:
             print(f"Result: [Database Error] Query failed: {e}")
 
     print("-" * 50)
+
 
 if __name__ == "__main__":
     # Case A: Out-of-Bounds

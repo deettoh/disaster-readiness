@@ -6,6 +6,7 @@ from sqlalchemy import create_engine, text
 
 DATABASE_URL = "postgresql://postgres:root@localhost:5432/routing_db"
 
+
 def get_nearest_node(engine, lon, lat, label="Point"):
     """Snaps coordinates to the closest road node ID."""
     query = """
@@ -28,6 +29,7 @@ def get_nearest_node(engine, lon, lat, label="Point"):
             print(f"Distance: {round(dist, 2)} meters away.")
             return node_id
         return None
+
 
 def verify_snapping_tasks():
     """Picks nodes, adds a random offset, and verifies snapping and routing."""
@@ -70,11 +72,16 @@ def verify_snapping_tasks():
             );
         """
         with engine.connect() as conn:
-            res = conn.execute(text(routing_test), {"start": start_node, "end": end_node}).fetchone()
+            res = conn.execute(
+                text(routing_test), {"start": start_node, "end": end_node}
+            ).fetchone()
             if res and res[0] > 0:
-                print(f"Success! A path exists between snapped nodes {start_node} and {end_node}.")
+                print(
+                    f"Success! A path exists between snapped nodes {start_node} and {end_node}."
+                )
             else:
                 print("Snapping worked, but no path exists between these points.")
+
 
 if __name__ == "__main__":
     verify_snapping_tasks()

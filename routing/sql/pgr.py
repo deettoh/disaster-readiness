@@ -5,6 +5,7 @@ from sqlalchemy import create_engine, text
 
 DATABASE_URL = "postgresql://postgres:root@localhost:5432/routing_db"
 
+
 def get_node_id(conn, lon, lat):
     """Finds the nearest road network node ID for a pair of coordinates."""
     # Using the KNN operator <-> for high-performance spatial indexing
@@ -15,6 +16,7 @@ def get_node_id(conn, lon, lat):
     """
     res = conn.execute(text(snap_sql), {"lon": lon, "lat": lat}).fetchone()
     return res[0] if res else None
+
 
 def run_route(start_coords, end_coords, algorithm="dijkstra"):
     """Executes a pathfinding query (Dijkstra or A*) and returns the travel time and geometry."""
@@ -28,7 +30,9 @@ def run_route(start_coords, end_coords, algorithm="dijkstra"):
         if not start_node or not end_node:
             return "Error: Could not snap coordinates to road network."
 
-        print(f"--- Calculating {algorithm.upper()} Path: {start_node} -> {end_node} ---")
+        print(
+            f"--- Calculating {algorithm.upper()} Path: {start_node} -> {end_node} ---"
+        )
 
         # Define Queries
         dijkstra_sql = """
@@ -63,6 +67,12 @@ def run_route(start_coords, end_coords, algorithm="dijkstra"):
         # Execute Pathfinding
         results = conn.execute(text(query), {"start": start_node, "end": end_node}).fetchall()
 
+
+        # Execute Pathfinding
+        results = conn.execute(
+            text(query), {"start": start_node, "end": end_node}
+        ).fetchall()
+
         if not results or len(results) <= 1:
             print("No path found.")
             return None
@@ -74,15 +84,17 @@ def run_route(start_coords, end_coords, algorithm="dijkstra"):
         print("Route Found!")
         print(f"Estimated Travel Time: {round(total_cost / 60, 2)} minutes")
         print(f"Segments traversed: {len(path_geometry)}")
-        return {
-            "travel_time_min": round(total_cost / 60, 2),
-            "segments": path_geometry
-        }
+        return {"travel_time_min": round(total_cost / 60, 2), "segments": path_geometry}
+
 
 if __name__ == "__main__":
     # Example coordinates in Petaling Jaya
     START = (101.609, 3.155) # Mutiara Damansara
     END = (101.645, 3.100)   # PJ State
+
+    START = (101.609, 3.155)  # Mutiara Damansara
+    END = (101.645, 3.100)  # PJ State
+
 
     # Run Dijkstra
     route_data = run_route(START, END, algorithm="dijkstra")

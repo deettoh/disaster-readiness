@@ -42,7 +42,7 @@ def validate_coordinates(lat, lon):
     return True, "Valid"
 
 def get_route(start_lat, start_lon, end_lat, end_lon, algorithm="dijkstra"):
-    """Official Routing Query Contract (For Member A)
+    """Official Routing Query Contract (For Member A).
     Input:
         start_lat, start_lon
         end_lat, end_lon
@@ -55,46 +55,35 @@ def get_route(start_lat, start_lon, end_lat, end_lon, algorithm="dijkstra"):
             "geojson": {...}
         }.
     """  # noqa: D205
-    # --- 1. Validation ---
+    # 1. Validation
     for label, lat, lon in [("Start", start_lat, start_lon), ("End", end_lat, end_lon)]:
         is_valid, msg = validate_coordinates(lat, lon)
         if not is_valid:
-            return {
-                "status": "error",
-                "error_type": "VALIDATION_ERROR",
-                "message": f"{label}: {msg}"
-            }
+            return {"status": "error", "error_type": "VALIDATION_ERROR", "message": f"{label}: {msg}"}
 
     try:
         with engine.connect() as conn:
-            # --- 2. Snap Coordinates to Nearest Road Nodes ---
+            # 2. Snap Coordinates to Nearest Road Nodes
             snap_sql = """
                 SELECT id FROM pj_roads_vertices_pgr
                 ORDER BY the_geom <-> ST_SetSRID(ST_Point(:lon, :lat), 4326)
                 LIMIT 1;
             """
 
-            start_node_row = conn.execute(text(snap_sql), {"lon": start_lon, "lat": start_lat}).fetchone()
-            end_node_row = conn.execute(text(snap_sql), {"lon": end_lon, "lat": end_lat}).fetchone()
+            start_node = conn.execute(text(snap_sql), {"lon": start_lon, "lat": start_lat}).fetchone()
+            end_node = conn.execute(text(snap_sql), {"lon": end_lon, "lat": end_lat}).fetchone()
 
-            if not start_node_row or not end_node_row:
-                return {"status": "error", "error_type": "DB_ERROR", "message": "Vertex table empty."}
+            if not start_node or not end_node:
+                return {"status": "error", "message": "Could not locate nearest road nodes."}
 
-            u, v = start_node_row[0], end_node_row[0]
+            u, v = start_node[0], end_node[0]
 
-            # Handle case where start and end are the same road junction
             if u == v:
-                return {
-                    "status": "success",
-                    "distance_km": 0.0,
-                    "eta_minutes": 0.0,
-                    "geojson": None
-                }
+                return {"status": "success", "distance_km": 0.0, "eta_minutes": 0.0, "geojson": None}
 
-            # --- 3. Dynamic Algorithm Configuration ---
+            # 3. Dynamic Algorithm Configuration
             if algorithm.lower() == "astar":
                 pgr_func = "pgr_astar"
-                # A* requires x1, y1, x2, y2 for the heuristic calculation
                 inner_query = """
                     SELECT id, source, target, agg_cost AS cost, agg_reverse_cost AS reverse_cost,
                     ST_X(ST_StartPoint(geometry)) AS x1, ST_Y(ST_StartPoint(geometry)) AS y1,
@@ -109,7 +98,7 @@ def get_route(start_lat, start_lon, end_lat, end_lon, algorithm="dijkstra"):
                 params = {"start": u, "end": v}
                 extra_args = ""
 
-            # --- 4. Execute Pathfinding and Geometry Aggregation ---
+            # 4. Execute Pathfinding and Geometry Aggregation
             routing_sql = f"""
                 WITH path AS (
                     SELECT * FROM {pgr_func}(
@@ -133,13 +122,9 @@ def get_route(start_lat, start_lon, end_lat, end_lon, algorithm="dijkstra"):
             result = conn.execute(text(routing_sql), params).fetchone()
 
             if not result or result[2] is None:
-                return {
-                    "status": "error",
-                    "error_type": "ROUTING_ERROR",
-                    "message": "No path exists between these points in the road graph."
-                }
+                return {"status": "error", "message": "No route found between selected points."}
 
-            # --- 5. Format Success Response ---
+            # 5. Success Response
             return {
                 "status": "success",
                 "distance_km": round(float(result[0]) / 1000, 2),
@@ -157,8 +142,4 @@ def get_route(start_lat, start_lon, end_lat, end_lon, algorithm="dijkstra"):
 
     except Exception as e:
         logging.error(f"Critical error in get_route: {e}")
-        return {
-            "status": "error",
-            "error_type": "INTERNAL_SERVER_ERROR",
-            "message": "The routing engine encountered an unexpected database error."
-        }
+        return {"status": "error", "message": "The routing engine encountered an internal database error."}
