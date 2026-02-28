@@ -1,4 +1,5 @@
-/**Convert API hazard response to GeoJSON format for MapLibre 
+/** 
+ * Convert API hazard response to GeoJSON format for MapLibre
  * 
  * @param {*} apiResponse 
  * @returns 
@@ -26,7 +27,8 @@ export function hazardsToGeoJSON(apiResponse) {
   };
 }
 
-/**Combine readiness scores from API with GeoJSON polygons for map visualization
+/**
+ * Combine readiness scores from API with GeoJSON polygons for map visualization
  * 
  * @param {*} geojson 
  * @param {*} readinessItems 

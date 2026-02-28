@@ -40,9 +40,9 @@ export default function MapView({ onHazardClick }) {
   return <div ref={mapContainer} className="w-full h-full" />;
 }
 
-/* ================================
-   DATA LOADERS
-================================ */
+/*
+ * DATA LODAERS
+ */
 
 async function loadHazards() {
   if (USE_MOCK) {
@@ -113,9 +113,9 @@ async function loadReadiness() {
   return mergeReadinessIntoGeoJSON(geojson, readinessData.items);
 }
 
-/* ================================
-   LAYERS
-================================ */
+/*
+ * LAYERS
+ */
 
 function addHazardLayer(map, geojson, onHazardClick) {
   map.addSource("hazards", {
