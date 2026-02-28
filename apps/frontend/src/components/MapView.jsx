@@ -1,12 +1,14 @@
 import { useEffect, useRef } from "react";
-import { MAPTILER_KEY } from "../api/config";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+import { MAPTILER_KEY } from "../api/config";
+import { hazardsToGeoJSON } from "../utils/geojson";
+import { mergeReadinessIntoGeoJSON } from "../utils/geojson";
 
-/**
- * MapView component initializes and renders the map using MapLibre GL JS.
- */
-export default function MapView() {
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
+export default function MapView({ onHazardClick }) {
   const mapContainer = useRef(null);
 
   useEffect(() => {
