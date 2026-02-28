@@ -1,3 +1,4 @@
+import { useState } from "react";
 import MapView from "./components/MapView";
 
 /**
@@ -5,6 +6,8 @@ import MapView from "./components/MapView";
  * Overall layout: nav bar, full-screen map, and desktop side panel.
  */
 export default function App() {
+  const [selectedHazard, setSelectedHazard] = useState(null);
+
   return (
     <div className="h-screen w-screen flex flex-col">
       
@@ -20,7 +23,7 @@ export default function App() {
         
         {/* Map */}
         <div className="flex-1 relative">
-          <MapView />
+          <MapView onHazardClick={setSelectedHazard} />
           
           {/* Floating Report Button */}
           <button className="absolute bottom-6 right-6 bg-red-600 text-white px-4 py-3 rounded-full shadow-lg hover:bg-red-700 transition">
@@ -33,8 +36,17 @@ export default function App() {
           <div className="p-4 font-semibold border-b">
             Info Panel
           </div>
+
           <div className="p-4 text-sm text-gray-600">
-            Click a hazard or area to see details.
+            {selectedHazard ? (
+              <div className="space-y-2">
+                <p><strong>Type:</strong> {selectedHazard.label}</p>
+                <p><strong>Confidence:</strong> {selectedHazard.confidence}</p>
+                <p><strong>Observed:</strong> {selectedHazard.observed_at}</p>
+              </div>
+            ) : (
+              <p>Click a hazard to see details.</p>
+            )}
           </div>
         </div>
 
