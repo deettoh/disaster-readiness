@@ -1,13 +1,14 @@
 """Provides a standardized query contract that returns distance, ETA, and GeoJSON geometries for any PJ coordinate pair."""
 
-from sqlalchemy import create_engine, text
 import json
+
+from sqlalchemy import create_engine, text
 
 DATABASE_URL = "postgresql://postgres:root@localhost:5432/routing_db"
 
+
 def get_route(start_lat, start_lon, end_lat, end_lon, algorithm="dijkstra"):
-    """
-    Official Routing Query Contract (For Member A)
+    """Official Routing Query Contract (For Member A).
 
     Input:
         start_lat, start_lon
@@ -22,11 +23,9 @@ def get_route(start_lat, start_lon, end_lat, end_lon, algorithm="dijkstra"):
             "geojson": {...}
         }
     """
-
     engine = create_engine(DATABASE_URL)
 
     with engine.connect() as conn:
-
         # Snap Start Node
         snap_sql = """
             SELECT id FROM pj_roads_vertices_pgr
@@ -35,13 +34,11 @@ def get_route(start_lat, start_lon, end_lat, end_lon, algorithm="dijkstra"):
         """
 
         start_node = conn.execute(
-            text(snap_sql),
-            {"lon": start_lon, "lat": start_lat}
+            text(snap_sql), {"lon": start_lon, "lat": start_lat}
         ).fetchone()
 
         end_node = conn.execute(
-            text(snap_sql),
-            {"lon": end_lon, "lat": end_lat}
+            text(snap_sql), {"lon": end_lon, "lat": end_lat}
         ).fetchone()
 
         if not start_node or not end_node:
@@ -55,7 +52,7 @@ def get_route(start_lat, start_lon, end_lat, end_lon, algorithm="dijkstra"):
                 "status": "success",
                 "distance_km": 0,
                 "eta_minutes": 0,
-                "geojson": None
+                "geojson": None,
             }
 
         # Routing Query
@@ -80,8 +77,7 @@ def get_route(start_lat, start_lon, end_lat, end_lon, algorithm="dijkstra"):
         """
 
         result = conn.execute(
-            text(routing_sql),
-            {"start": start_node, "end": end_node}
+            text(routing_sql), {"start": start_node, "end": end_node}
         ).fetchone()
 
         if not result or result[2] is None:
@@ -98,9 +94,6 @@ def get_route(start_lat, start_lon, end_lat, end_lon, algorithm="dijkstra"):
             "geojson": {
                 "type": "Feature",
                 "geometry": geojson_geom,
-                "properties": {
-                    "source": start_node,
-                    "target": end_node
-                }
-            }
+                "properties": {"source": start_node, "target": end_node},
+            },
         }

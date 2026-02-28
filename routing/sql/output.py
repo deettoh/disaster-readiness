@@ -1,13 +1,14 @@
 """Generates randomized route geometries output in GeoJSON format as well as distance/ETA output."""
 
 import json
+
 from sqlalchemy import create_engine, text
 
 DATABASE_URL = "postgresql://postgres:root@localhost:5432/routing_db"
 
+
 def get_random_node_ids(conn):
     """Picks two random node IDs from the road network."""
-
     query = "SELECT id FROM pj_roads_vertices_pgr ORDER BY RANDOM() LIMIT 2;"
     try:
         result = conn.execute(text(query)).fetchall()
@@ -18,11 +19,11 @@ def get_random_node_ids(conn):
         print(f"Database error: {e}")
         return None, None
 
+
 def get_route_output_by_nodes(start_node, end_node):
     """Generates GeoJSON geometries and travel metrics for randomized routes."""
-    
     engine = create_engine(DATABASE_URL)
-    
+
     route_query = """
         WITH path AS (
             SELECT * FROM pgr_dijkstra(
@@ -36,7 +37,7 @@ def get_route_output_by_nodes(start_node, end_node):
             JOIN pj_roads r ON p.edge = r.id
             ORDER BY p.seq
         )
-        SELECT 
+        SELECT
             SUM(length) as total_dist_m,
             SUM(agg_cost) as total_time_s,
             ST_AsGeoJSON(ST_LineMerge(ST_Collect(geometry))) as geojson_geom
@@ -46,10 +47,9 @@ def get_route_output_by_nodes(start_node, end_node):
     with engine.connect() as conn:
         print(f"Attempting route from Node {start_node} to Node {end_node}")
         try:
-            result = conn.execute(text(route_query), {
-                "start_node": start_node,
-                "end_node": end_node
-            }).fetchone()
+            result = conn.execute(
+                text(route_query), {"start_node": start_node, "end_node": end_node}
+            ).fetchone()
         except Exception as e:
             print(f"Routing error: {e}")
             return None
@@ -65,17 +65,17 @@ def get_route_output_by_nodes(start_node, end_node):
             "task_4_geojson": {
                 "type": "Feature",
                 "geometry": geojson_geometry,
-                "properties": {"source": start_node, "target": end_node}
+                "properties": {"source": start_node, "target": end_node},
             },
             "task_5_metrics": {
                 "distance_km": round(total_dist_meters / 1000, 2),
-                "eta_minutes": round(total_time_seconds / 60, 2)
-            }
+                "eta_minutes": round(total_time_seconds / 60, 2),
+            },
         }
+
 
 def verify_outputs(data):
     """Prints a summary of the generated route geometry and performance metrics."""
-
     if not data:
         return
 
@@ -85,6 +85,7 @@ def verify_outputs(data):
     print(f"Distance: {metrics['distance_km']} km")
     print(f"ETA: {metrics['eta_minutes']} minutes")
     print("--------------------------")
+
 
 if __name__ == "__main__":
     engine = create_engine(DATABASE_URL)
