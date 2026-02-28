@@ -24,3 +24,21 @@
 | `pj_test_scenarios.json` | File of sample coordinate pairs for testing. |
 | `pj_full_map_visualization.png` | Map visualization of Petaling Jaya. |
 | `random_route_output.geojson` | Stores the output generated from output.py |
+
+## Query Contract for Member A (Backend)
+Function: get_route(start_lat, start_lon, end_lat, end_lon, algorithm="dijkstra")
+
+Input:
+| Input | Data Type | Description |
+| --- | --- | --- |
+| `start_lat / lon` | float | WGS84 coordinates of the user. |
+| `end_lat / lon` | float | WGS84 coordinates of the destination/shelter. |
+| `algorithm` | string | "dijkstra" (standard) or "astar" (faster for long distances). |
+
+Output (If Success):
+{
+  "status": "success",
+  "distance_km": 5.42,
+  "eta_minutes": 12.5,
+  "geojson": { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [...] } }
+}
