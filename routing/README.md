@@ -26,6 +26,7 @@
 | `random_route_output.geojson` | Stores the output generated from output.py |
 
 ## Query Contract for Member A (Backend)
+Script to run: routing/sql/contract.py
 Function: get_route(start_lat, start_lon, end_lat, end_lon, algorithm="dijkstra")
 
 Input:

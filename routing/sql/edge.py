@@ -1,15 +1,13 @@
 """Tests the routing engine against edge cases like out-of-bounds coordinates and identical start/end points."""
 
-import json
 from sqlalchemy import create_engine, text
 
 DATABASE_URL = "postgresql://postgres:root@localhost:5432/routing_db"
 
 def get_node_id(conn, lon, lat):
     """Attempts to find the nearest node ID within 1km of the coordinates."""
-
     snap_sql = """
-        SELECT id, 
+        SELECT id,
                ST_Distance(the_geom::geography, ST_SetSRID(ST_Point(:lon, :lat), 4326)::geography) as dist
         FROM pj_roads_vertices_pgr
         WHERE ST_DWithin(the_geom::geography, ST_SetSRID(ST_Point(:lon, :lat), 4326)::geography, 1000)
@@ -21,18 +19,17 @@ def get_node_id(conn, lon, lat):
 
 def test_route_logic(start_coords, end_coords, label):
     """Tests the routing engine against edge cases such as out-of-bounds points, identical locations, and disconnected roads."""
-
     engine = create_engine(DATABASE_URL)
     print(f"--- Testing Case: {label} ---")
-    
+
     with engine.connect() as conn:
         # Snap Nodes
         u = get_node_id(conn, start_coords[0], start_coords[1])
         v = get_node_id(conn, end_coords[0], end_coords[1])
 
         if u is None or v is None:
-            print(f"Result: [Input Error] Could not snap coordinates to network. "
-                  f"Points are likely outside the Petaling Jaya bounds.")
+            print("Result: [Input Error] Could not snap coordinates to network. "
+                  "Points are likely outside the Petaling Jaya bounds.")
             print("-" * 50)
             return
 
@@ -45,7 +42,7 @@ def test_route_logic(start_coords, end_coords, label):
 
         # Run Dijkstra Pathfinding
         query = """
-            SELECT count(*) 
+            SELECT count(*)
             FROM pgr_dijkstra(
                 'SELECT id, source, target, agg_cost AS cost FROM pj_roads',
                 :start_node, :end_node, directed := true
@@ -53,7 +50,7 @@ def test_route_logic(start_coords, end_coords, label):
         """
         try:
             res = conn.execute(text(query), {"start_node": u, "end_node": v}).fetchone()
-            
+
             if res and res[0] > 0:
                 print(f"Result: [Success] Path found between Node {u} and Node {v}.")
             else:

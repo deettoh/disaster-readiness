@@ -1,8 +1,9 @@
 """Provides a standardized query contract that returns distance, ETA, and GeoJSON geometries for any PJ coordinate pair."""
 
-import os
 import json
 import logging
+import os
+
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
 
@@ -31,18 +32,17 @@ def validate_coordinates(lat, lon):
     """Checks if coordinates are within the PJ service area defined in .env."""
     if lat is None or lon is None:
         return False, "Coordinates cannot be null."
-    
-    in_bounds = (PJ_BOUNDS["min_lat"] <= lat <= PJ_BOUNDS["max_lat"] and 
+
+    in_bounds = (PJ_BOUNDS["min_lat"] <= lat <= PJ_BOUNDS["max_lat"] and
                  PJ_BOUNDS["min_lon"] <= lon <= PJ_BOUNDS["max_lon"])
-    
+
     if not in_bounds:
         return False, f"Coordinates ({lat}, {lon}) are outside the PJ service area."
-    
+
     return True, "Valid"
 
 def get_route(start_lat, start_lon, end_lat, end_lon, algorithm="dijkstra"):
-    """
-    Official Routing Query Contract (For Member A)
+    """Official Routing Query Contract (For Member A)
     Input:
         start_lat, start_lon
         end_lat, end_lon
@@ -53,16 +53,15 @@ def get_route(start_lat, start_lon, end_lat, end_lon, algorithm="dijkstra"):
             "distance_km": float,
             "eta_minutes": float,
             "geojson": {...}
-        }
-    """
-    
+        }.
+    """  # noqa: D205
     # --- 1. Validation ---
     for label, lat, lon in [("Start", start_lat, start_lon), ("End", end_lat, end_lon)]:
         is_valid, msg = validate_coordinates(lat, lon)
         if not is_valid:
             return {
-                "status": "error", 
-                "error_type": "VALIDATION_ERROR", 
+                "status": "error",
+                "error_type": "VALIDATION_ERROR",
                 "message": f"{label}: {msg}"
             }
 
@@ -74,7 +73,7 @@ def get_route(start_lat, start_lon, end_lat, end_lon, algorithm="dijkstra"):
                 ORDER BY the_geom <-> ST_SetSRID(ST_Point(:lon, :lat), 4326)
                 LIMIT 1;
             """
-            
+
             start_node_row = conn.execute(text(snap_sql), {"lon": start_lon, "lat": start_lat}).fetchone()
             end_node_row = conn.execute(text(snap_sql), {"lon": end_lon, "lat": end_lat}).fetchone()
 
@@ -135,8 +134,8 @@ def get_route(start_lat, start_lon, end_lat, end_lon, algorithm="dijkstra"):
 
             if not result or result[2] is None:
                 return {
-                    "status": "error", 
-                    "error_type": "ROUTING_ERROR", 
+                    "status": "error",
+                    "error_type": "ROUTING_ERROR",
                     "message": "No path exists between these points in the road graph."
                 }
 
@@ -159,7 +158,7 @@ def get_route(start_lat, start_lon, end_lat, end_lon, algorithm="dijkstra"):
     except Exception as e:
         logging.error(f"Critical error in get_route: {e}")
         return {
-            "status": "error", 
-            "error_type": "INTERNAL_SERVER_ERROR", 
+            "status": "error",
+            "error_type": "INTERNAL_SERVER_ERROR",
             "message": "The routing engine encountered an unexpected database error."
         }

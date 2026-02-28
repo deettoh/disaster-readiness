@@ -1,11 +1,10 @@
 """Generates structured JSON sample test cases representing realistic disaster evacuation scenarios across Petaling Jaya."""
 
 import json
-import os
+
 
 def generate_pj_test_cases():
     """Generates realistic disaster-evacuation scenarios for Petaling Jaya and saves to 'test_scenarios.json' for use in routing tests."""
-    
     # Coordinates for Petaling Jaya Hotspots (Starts) and Shelters (Ends)
     scenarios = [
         {
@@ -50,7 +49,7 @@ def generate_pj_test_cases():
     try:
         with open(output_file, 'w') as f:
             json.dump(scenarios, f, indent=4)
-        
+
         print(f"Successfully generated {len(scenarios)} scenarios in '{output_file}'")
         print("\n--- Summary of Test Pairs ---")
         for s in scenarios:

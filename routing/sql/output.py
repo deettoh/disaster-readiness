@@ -1,13 +1,13 @@
 """Generates randomized route geometries output in GeoJSON format as well as distance/ETA output."""
 
 import json
+
 from sqlalchemy import create_engine, text
 
 DATABASE_URL = "postgresql://postgres:root@localhost:5432/routing_db"
 
 def get_random_node_ids(conn):
     """Picks two random node IDs from the road network."""
-
     query = "SELECT id FROM pj_roads_vertices_pgr ORDER BY RANDOM() LIMIT 2;"
     try:
         result = conn.execute(text(query)).fetchall()
@@ -20,9 +20,8 @@ def get_random_node_ids(conn):
 
 def get_route_output_by_nodes(start_node, end_node):
     """Generates GeoJSON geometries and travel metrics for randomized routes."""
-    
     engine = create_engine(DATABASE_URL)
-    
+
     route_query = """
         WITH path AS (
             SELECT * FROM pgr_dijkstra(
@@ -36,7 +35,7 @@ def get_route_output_by_nodes(start_node, end_node):
             JOIN pj_roads r ON p.edge = r.id
             ORDER BY p.seq
         )
-        SELECT 
+        SELECT
             SUM(length) as total_dist_m,
             SUM(agg_cost) as total_time_s,
             ST_AsGeoJSON(ST_LineMerge(ST_Collect(geometry))) as geojson_geom
@@ -75,7 +74,6 @@ def get_route_output_by_nodes(start_node, end_node):
 
 def verify_outputs(data):
     """Prints a summary of the generated route geometry and performance metrics."""
-
     if not data:
         return
 
