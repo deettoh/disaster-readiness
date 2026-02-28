@@ -39,3 +39,4 @@
 
 - Empty scaffold directories include `.gitkeep` so they are tracked in Git.
 - Poetry is initialized at repository root (`pyproject.toml`, `poetry.lock`, `.venv`).
+- Local container stack runbook is in `infra/docker/README.md` (`docker-compose.yml` for API/worker/Redis and optional frontend container).
