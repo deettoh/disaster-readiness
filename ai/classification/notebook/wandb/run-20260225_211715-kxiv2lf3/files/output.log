@@ -1,8 +1,0 @@
-Using Apple MPS GPU
-Classes:  ['fire', 'flood', 'landslide', 'normal']
-Total Images:  2110
-/Users/amber/miniconda3/envs/tf310/lib/python3.10/site-packages/torchvision/models/_utils.py:208: UserWarning: The parameter 'pretrained' is deprecated since 0.13 and may be removed in the future, please use 'weights' instead.
-  warnings.warn(
-/Users/amber/miniconda3/envs/tf310/lib/python3.10/site-packages/torchvision/models/_utils.py:223: UserWarning: Arguments other than a weight enum or `None` for 'weights' are deprecated since 0.13 and may be removed in the future. The current behavior is equivalent to passing `weights=EfficientNet_B0_Weights.IMAGENET1K_V1`. You can also use `weights=EfficientNet_B0_Weights.DEFAULT` to get the most up-to-date weights.
-  warnings.warn(msg)
-Epoch 1/30 | Train Acc: 0.9129 | Train Loss: 0.2991 | Val Loss: 0.0000 | Val Acc: 0.9336
