@@ -86,7 +86,7 @@ def run_update_verification():
     test_lat, test_lon = 3.110, 101.635
 
     # 3. Execute Task 4 (Penalty Update) and Task 5 (Cost Recomputation)
-    updater.apply_hazard_event(test_lat, test_lon, 500, "flood", 0.9)
+    updater.apply_hazard_event(test_lat, test_lon, 500, "landslide", 0.9)
 
     # 4. Final verification
     if updater.verify_update_integrity():
