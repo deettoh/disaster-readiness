@@ -1,0 +1,15 @@
+
+# Member C: Routing Data
+cache/
+pj_mvp_data/
+*.shp
+*.shx
+*.dbf
+*.prj
+*.cpg
+
+# Python
+__pycache__/
+.venv/
+.env
+
