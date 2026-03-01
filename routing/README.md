@@ -1,5 +1,65 @@
 # Hyperlocal Disaster Readiness (Malaysia) - Routing
 
+
+## SQL Routing Backend Setup (for API `ROUTING_BACKEND=sql`)
+
+Run these steps from repository root.
+
+### Prerequisites
+
+1. Install dependencies:
+  ```bash
+  poetry install
+  ```
+2. Ensure PostgreSQL is running and reachable at:
+  ```
+  postgresql://postgres:root@localhost:5432/routing_db
+  ```
+  If your DB URL is different, update the `DATABASE_URL` values in the routing scripts or set your environment accordingly.
+
+3. Download OSM roads first:
+  ```bash
+  poetry run python -m routing.data.osm
+  ```
+
+### Build routing database objects (run in order)
+
+1. Import roads and enable PostGIS/pgRouting:
+  ```bash
+  poetry run python -m routing.data.postgres
+  ```
+2. Build topology and vertices table:
+  ```bash
+  poetry run python -m routing.data.topology
+  ```
+3. Compute costs and directional aggregated costs:
+  ```bash
+  poetry run python -m routing.data.cost
+  ```
+4. Apply routing indexes:
+  ```bash
+  poetry run python -m routing.data.index
+  ```
+5. Optional sanity validation:
+  ```bash
+  poetry run python -m routing.data.sanity
+  ```
+
+### Enable SQL backend in API
+
+Set in `.env`:
+
+```dotenv
+ROUTING_BACKEND=sql
+ROUTING_DATABASE_URL=postgresql://postgres:root@localhost:5432/routing_db
+ROUTING_ALGORITHM=dijkstra
+```
+
+Then start the API (Docker or non-Docker) from the root project runbook in [`README.md`](../README.md#2-run-with-docker).
+
+Note:
+- OSM shapefiles are generated locally under `routing/data/pj_mvp_data` and are not meant to be committed.
+
 ## Folder Structure (Current)
 
 | Path | Purpose |
@@ -30,7 +90,7 @@
 | `routing/testing/random_route_output.py` | Generates randomized route GeoJSON output into `routing/artifacts`. |
 | `routing/testing/scenario_generator.py` | Generates routing test scenario fixtures into `routing/testing/fixtures`. |
 
-## Query Contract for Member A (Backend)
+## Query Contract for Backend
 Function: get_route(start_lat, start_lon, end_lat, end_lon, algorithm="dijkstra")
 
 Input:
@@ -41,9 +101,11 @@ Input:
 | `algorithm` | string | "dijkstra" (standard) or "astar" (faster for long distances). |
 
 Output (If Success):
+```bash
 {
   "status": "success",
   "distance_km": 5.42,
   "eta_minutes": 12.5,
   "geojson": { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [...] } }
 }
+```
