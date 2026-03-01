@@ -1,12 +1,12 @@
 # Local Docker Stack
 
-This folder contains local containerization assets for the app:
+Local containerization assets are split by service:
 
-- `api.Dockerfile` - FastAPI API image
-- `worker.Dockerfile` - RQ worker image
-- `frontend.Dockerfile` - React frontend static image (optional)
-- `frontend.nginx.conf` - Nginx SPA fallback config
 - `docker-compose.yml` - local stack orchestration (`redis`, `api`, `worker`, optional `frontend`)
+- `apps/api/Dockerfile` - FastAPI API image
+- `apps/worker/Dockerfile` - RQ worker image
+- `apps/frontend/Dockerfile` - React frontend static image (optional)
+- `apps/frontend/nginx.conf` - Nginx SPA fallback config
 
 ## Prerequisites
 
@@ -16,7 +16,7 @@ This folder contains local containerization assets for the app:
 ## Run backend stack (API + worker + Redis)
 
 ```bash
-make docker-up
+docker compose up --build
 ```
 
 Useful URLs:
@@ -27,7 +27,7 @@ Useful URLs:
 ## Run full stack including frontend
 
 ```bash
-make docker-up-frontend
+docker compose --profile frontend up --build
 ```
 
 Frontend URL:
@@ -37,24 +37,16 @@ Frontend URL:
 ## Stop and remove containers
 
 ```bash
-make docker-down
+docker compose down
 ```
 
 ## Optional helper commands
 
 ```bash
-make docker-config
-make docker-build
-make docker-ps
-make docker-logs
-```
-
-## Direct docker compose commands (equivalent)
-
-```bash
-docker compose -f infra/docker/docker-compose.yml up --build
-docker compose -f infra/docker/docker-compose.yml --profile frontend up --build
-docker compose -f infra/docker/docker-compose.yml down
+docker compose config
+docker compose build
+docker compose ps
+docker compose logs -f
 ```
 
 ## Notes

@@ -23,7 +23,7 @@
 | `tests/routing/` | Routing query, penalty update, and accessibility metric tests. | Member C |
 | `tests/integration/` | Cross-service integration tests (upload -> AI -> reroute -> readiness -> alerts). | Members A/B/C/D |
 | `tests/e2e/` | End-to-end user flow tests from frontend through backend services. | Member E + Member A |
-| `infra/docker/` | Dockerfiles and local container setup for API/worker/frontend. | Member A |
+| `docker-compose.yml`, `apps/*/Dockerfile` | Local container orchestration and per-service image definitions for API/worker/frontend. | Member A |
 | `infra/deploy/` | Deployment configs/runbooks for Render/Cloud Run + Vercel/Netlify + Supabase. | Member A + Member E |
 | `docs/architecture/` | Architecture diagrams and technical system design notes. | All members |
 | `docs/api/` | API documentation, payload examples, and integration notes. | Member A |
@@ -39,4 +39,4 @@
 
 - Empty scaffold directories include `.gitkeep` so they are tracked in Git.
 - Poetry is initialized at repository root (`pyproject.toml`, `poetry.lock`, `.venv`).
-- Local container stack runbook is in `infra/docker/README.md` (`docker-compose.yml` for API/worker/Redis and optional frontend container).
+- Local container stack runbook is in `DOCKER.md` (`docker-compose.yml` for API/worker/Redis and optional frontend container).

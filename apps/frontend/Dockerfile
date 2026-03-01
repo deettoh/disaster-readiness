@@ -22,7 +22,7 @@ RUN npm run build
 # Serve static files with Nginx.
 FROM nginx:1.27-alpine
 
-COPY infra/docker/frontend.nginx.conf /etc/nginx/conf.d/default.conf
+COPY apps/frontend/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=builder /app/apps/frontend/dist /usr/share/nginx/html
 
 EXPOSE 80

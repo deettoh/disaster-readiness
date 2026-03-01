@@ -17,8 +17,8 @@ services:
   # FastAPI backend
   api:
     build:
-      context: ../..
-      dockerfile: infra/docker/api.Dockerfile
+      context: .
+      dockerfile: apps/api/Dockerfile
     container_name: disaster-api
     environment:
       APP_ENV: local
@@ -36,8 +36,8 @@ services:
   # Background worker for async job processing.
   worker:
     build:
-      context: ../..
-      dockerfile: infra/docker/worker.Dockerfile
+      context: .
+      dockerfile: apps/worker/Dockerfile
     container_name: disaster-worker
     environment:
       REDIS_URL: redis://redis:6379/0
@@ -51,8 +51,8 @@ services:
     # Optional profile to keep backend-only startup fast during API/worker development.
     profiles: ["frontend"]
     build:
-      context: ../..
-      dockerfile: infra/docker/frontend.Dockerfile
+      context: .
+      dockerfile: apps/frontend/Dockerfile
       args:
         # Build-time API base URL for static frontend bundle.
         VITE_API_BASE_URL: http://localhost:8000/api/v1
