@@ -4,7 +4,10 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "sync:shelters": "if [ -f ../../routing/artifacts/pj_shelters.csv ]; then cp ../../routing/artifacts/pj_shelters.csv ./public/pj_shelters.csv; else echo 'Warning: routing/artifacts/pj_shelters.csv not found, skipping shelter CSV sync.'; fi",
+    "predev": "npm run sync:shelters",
     "dev": "vite",
+    "prebuild": "npm run sync:shelters",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"
