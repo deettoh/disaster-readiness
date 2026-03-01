@@ -27,13 +27,15 @@ from app.services.mocks import (
 )
 from app.services.orchestration import ReportOrchestrationService
 from app.services.queue_backends import RQQueueClient
+from app.services.routing_sql import SQLRoutingService
 
 _report_repo = MockReportRepository()
 _mock_queue_client = MockQueueClient()
 _hazard_service = MockHazardService()
 _readiness_service = MockReadinessService()
 _alert_service = MockAlertService()
-_routing_service = MockRoutingService()
+_mock_routing_service = MockRoutingService()
+_sql_routing_service: SQLRoutingService | None = None
 _status_store = MockReportStatusStore()
 _post_processing_hooks = MockPostProcessingHooks()
 _rq_queue_client: RQQueueClient | None = None
@@ -91,7 +93,17 @@ def get_alert_service() -> AlertQueryService:
 
 def get_routing_service() -> RoutingService:
     """Return the routing service dependency."""
-    return _routing_service
+    settings = get_settings()
+    if settings.routing_backend == "mock":
+        return _mock_routing_service
+
+    global _sql_routing_service
+    if _sql_routing_service is None:
+        _sql_routing_service = SQLRoutingService(
+            database_url=settings.routing_database_url,
+            algorithm=settings.routing_algorithm,
+        )
+    return _sql_routing_service
 
 
 def get_report_status_store() -> ReportStatusStore:
