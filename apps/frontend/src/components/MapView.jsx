@@ -8,34 +8,43 @@ import { mergeReadinessIntoGeoJSON } from "../utils/geojson";
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
+
+
 export default function MapView({ onHazardClick }) {
   const mapContainer = useRef(null);
-
+  const mapRef = useRef(null);
   useEffect(() => {
-    const map = new maplibregl.Map({
-      container: mapContainer.current,
-      style: `https://api.maptiler.com/maps/streets/style.json?key=${MAPTILER_KEY}`,
-      center: [101.6165, 3.1292],
-      zoom: 12,
-    });
+  if (mapRef.current) return; // Prevent reinitialization
 
-    map.on("load", async () => {
-      try {
-        const hazardGeoJSON = await loadHazards();
-        addHazardLayer(map, hazardGeoJSON, onHazardClick);
-        const readinessGeoJSON = await loadReadiness();
-        addReadinessLayer(map, readinessGeoJSON);
-        
-        // addShelterLayer(map);
-        // addRouteLayer(map);
+  const map = new maplibregl.Map({
+    container: mapContainer.current,
+    style: `https://api.maptiler.com/maps/streets/style.json?key=${MAPTILER_KEY}`,
+    center: [101.6165, 3.1292],
+    zoom: 12,
+  });
 
-      } catch (err) {
-        console.error("Failed to initialize layers:", err);
-      }
-    });
+  mapRef.current = map;
 
-    return () => map.remove();
-  }, [onHazardClick]);
+  map.on("load", async () => {
+    try {
+      const hazardGeoJSON = await loadHazards();
+      addHazardLayer(map, hazardGeoJSON, onHazardClick);
+
+      const readinessGeoJSON = await loadReadiness();
+      addReadinessLayer(map, readinessGeoJSON);
+
+    } catch (err) {
+      console.error("Failed to initialize layers:", err);
+    }
+  });
+
+  return () => {
+    if (mapRef.current) {
+      mapRef.current.remove();
+      mapRef.current = null;
+    }
+  };
+}, []);
 
   return <div ref={mapContainer} className="w-full h-full" />;
 }
