@@ -34,7 +34,10 @@ def predict_hazard(image_bytes: bytes) -> tuple[str, float]:
         probs = F.softmax(outputs, dim=1)
         confidence, predicted = torch.max(probs, 1)
 
+    UNCERTAIN_THRESHOLD = 0.6
     hazard_label = CLASS_LABELS[predicted.item()]
     confidence = float(confidence.item())
+    if confidence < UNCERTAIN_THRESHOLD:
+        hazard_label = "uncertain"
 
     return hazard_label, confidence
