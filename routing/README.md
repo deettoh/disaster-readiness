@@ -57,20 +57,20 @@ Output (If Success):
 
 1. Data Source: > * Table: cell_accessibility
 
-View: v_accessibility_readiness (Use this for scoring)
+  View: v_accessibility_readiness (Use this for scoring)
 
 2. Technical Specs:
 
-Coordinate System: WGS 84 (SRID: 4326).
+  Coordinate System: WGS 84 (SRID: 4326).
 
-Logic: Travel times are computed using Dijkstra's algorithm via pgRouting, factoring in both distance and hazard penalties.
+  Logic: Travel times are computed using Dijkstra's algorithm via pgRouting, factoring in both distance and hazard penalties.
 
-Accessibility Factor: 1.0 = fast access; 0.25 = restricted access.
+  Accessibility Factor: 1.0 = fast access; 0.25 = restricted access.
 
 3. Integration Recommendation:
-You can now run a spatial join between my v_accessibility_readiness view and your population_density data.
+  You can now run a spatial join between my v_accessibility_readiness view and your population_density data.
 
-"I have provided the 'Multiplier' (Accessibility). Multiply your population data by my factor, and you will see exactly where our disaster readiness is strongest and weakest."
+  "I have provided the 'Multiplier' (Accessibility). Multiply your population data by my factor, and you will see exactly where our disaster readiness is strongest and weakest."
 
-Query Example: >     SELECT a.cell_id, (a.accessibility_factor * p.density) as total_readiness_score FROM v_accessibility_readiness a JOIN population_data p ON ST_Intersects(a.cell_geom, p.geom);
+  Query Example: >     SELECT a.cell_id, (a.accessibility_factor * p.density) as total_readiness_score FROM v_accessibility_readiness a JOIN population_data p ON ST_Intersects(a.cell_geom, p.geom);
 
