@@ -8,7 +8,7 @@ import os
 from hazard_classification.inference import predict_hazard
 
 # change this to any test image
-TEST_IMAGE = "/Users/amber/Desktop/hackathon/flood.jpg"
+TEST_IMAGE = "/Users/amber/Desktop/hackathon/flood3.jpg"
 
 
 def main():
