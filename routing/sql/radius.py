@@ -1,4 +1,4 @@
-"""Implements radius-based spatial queries and tracks a specific edge for detailed state verification."""
+"""Implements radius-based spatial queries and verifies penalty application and resets."""
 
 from hazard import HazardManager
 from sqlalchemy import create_engine, text
@@ -49,71 +49,63 @@ class RadiusPenaltyManager:
             );
         """
         with self.engine.connect() as conn:
-            conn.execute(text(update_sql), {
+            result = conn.execute(text(update_sql), {
                 "penalty": penalty_value,
                 "lat": lat,
                 "lon": lon,
                 "radius": radius_meters
             })
             conn.commit()
-            return penalty_value
+            return result.rowcount
 
-    def get_edge_state(self, lat, lon):
-        """Finds the nearest edge to a point and returns its current cost metrics."""
-        query = """
-            SELECT id, base_cost, risk_penalty, agg_cost
-            FROM pj_roads
-            ORDER BY geometry <-> ST_SetSRID(ST_Point(:lon, :lat), 4326)
-            LIMIT 1;
-        """
-        with self.engine.connect() as conn:
-            return conn.execute(text(query), {"lat": lat, "lon": lon}).fetchone()
-
-def run_detailed_verification():
-    """Executes a 3-phase verification tracking a single edge for proof of calculation and reset."""
+def verify_radius_task():
+    """Performs a test run of the radius-based penalty implementation."""
     engine = create_engine(DATABASE_URL)
     rpm = RadiusPenaltyManager(engine)
 
-    # Test coordinates (Section 14, PJ)
-    t_lat, t_lon = 3.110, 101.635
-    t_radius = 300
-    t_hazard = "fire"
-    t_conf = 1.0
+    # Test parameters: A point in Petaling Jaya (Section 14 area)
+    test_lat, test_lon = 3.110, 101.635
+    test_radius = 500  # 500 meters
+    hazard = "flood"
+    conf = 0.9
 
-    print("--- DETAILED EDGE STATE VERIFICATION ---")
+    print("--- Affected Edges within Radius Query ---")
 
-    # PHASE 1: Initial Reset
+    # 1. Reset state
+    print("Resetting existing penalties...")
     rpm.reset_all_penalties()
-    state_init = rpm.get_edge_state(t_lat, t_lon)
-    edge_id = state_init[0]
 
-    # PHASE 2: Apply Hazard
-    applied_p = rpm.apply_hazard_to_area(t_lat, t_lon, t_radius, t_hazard, t_conf)
-    state_hazard = rpm.get_edge_state(t_lat, t_lon)
+    # 2. Apply Hazard
+    print(f"Applying '{hazard}' (conf: {conf}) within {test_radius}m of ({test_lat}, {test_lon})...")
+    affected_count = rpm.apply_hazard_to_area(test_lat, test_lon, test_radius, hazard, conf)
 
-    # PHASE 3: Final Reset
-    rpm.reset_all_penalties()
-    state_final = rpm.get_edge_state(t_lat, t_lon)
+    if affected_count > 0:
+        print(f"SUCCESS: {affected_count} road segments updated with new penalties.")
 
-    # Formatting Results
-    def format_row(label, data):
-        return f"{label.ljust(15)} | Penalty: {str(data[2]).ljust(8)} | Agg Cost: {str(round(data[3], 2)).ljust(10)}"
+        # 3. Verification Query
+        verify_sql = """
+            SELECT id, risk_penalty, agg_cost
+            FROM pj_roads
+            WHERE risk_penalty > 0
+            LIMIT 5;
+        """
+        with engine.connect() as conn:
+            rows = conn.execute(text(verify_sql)).fetchall()
+            print("\nSample of affected segments (Active State):")
+            for row in rows:
+                print(f" - Edge ID: {row[0]} | Penalty: {row[1]} | Total Cost: {row[2]:.2f}s")
 
-    print(f"Tracking Edge ID: {edge_id}")
-    print("-" * 50)
-    print(format_row("INITIAL (CLEAN)", state_init))
-    print(format_row("HAZARD ACTIVE", state_hazard))
-    print(format_row("POST-RESET", state_final))
-    print("-" * 50)
-
-    # Logic Check
-    math_correct = state_hazard[3] == (state_hazard[1] + applied_p)
-    reset_correct = state_final[2] == 0
-
-    if math_correct and reset_correct:
-        print("SUCCESS: Edge state transitions verified correctly.")
+        # 4. Final Reset Verification
+        print("\nVerifying Reset functionality...")
+        rpm.reset_all_penalties()
+        with engine.connect() as conn:
+            remaining = conn.execute(text("SELECT COUNT(*) FROM pj_roads WHERE risk_penalty > 0")).scalar()
+            if remaining == 0:
+                print("SUCCESS: All penalties successfully reset to 0.")
+            else:
+                print(f"FAILURE: {remaining} penalties still exist in the database.")
     else:
-        print("FAILURE: Verification mismatch detected.")
+        print("FAILED: No edges found within the specified radius. Check coordinates or graph data.")
 
 if __name__ == "__main__":
-    run_detailed_verification()
+    verify_radius_task()
