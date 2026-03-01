@@ -17,11 +17,6 @@ Run these steps from repository root.
   ```
   If your DB URL is different, update the `DATABASE_URL` values in the routing scripts or set your environment accordingly.
 
-3. Download OSM roads first:
-  ```bash
-  poetry run python -m routing.data.osm
-  ```
-
 ### Build routing database objects (run in order)
 
 1. Import roads and enable PostGIS/pgRouting:
@@ -59,6 +54,11 @@ Then start the API (Docker or non-Docker) from the root project runbook in [`REA
 
 Note:
 - OSM shapefiles are generated locally under `routing/data/pj_mvp_data` and are not meant to be committed.
+- If frontend needs shelter points, generate `routing/artifacts/pj_shelters.csv` with:
+  ```bash
+  poetry run python -m routing.data.shelter
+  ```
+- Frontend `npm run dev`/`npm run build` auto-syncs this file into `apps/frontend/public/pj_shelters.csv`.
 
 ## Folder Structure (Current)
 

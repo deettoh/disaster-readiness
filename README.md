@@ -22,7 +22,19 @@
     cd ../..
      ```
 
+5. Generate routing source data (OSM roads):
+	 ```bash
+	 poetry run python -m routing.data.osm
+	 ```
+
+6. Generate shelter CSV used by frontend sync:
+	 ```bash
+	 poetry run python -m routing.data.shelter
+	 ```
+
 Note:
+- Frontend `npm run dev`/`npm run build` automatically syncs `routing/artifacts/pj_shelters.csv` into `apps/frontend/public/pj_shelters.csv`.
+- If `pj_shelters.csv` is missing, frontend startup still works but shelter CSV sync is skipped with a warning.
 - If you use `ROUTING_BACKEND=sql`, continue with routing DB import/setup steps in [routing SQL setup](routing/README.md#sql-routing-backend-setup-for-api-routing_backendsql).
 
 
