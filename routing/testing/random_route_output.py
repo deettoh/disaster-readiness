@@ -1,10 +1,12 @@
 """Generates randomized route geometries output in GeoJSON format as well as distance/ETA output."""
 
 import json
+from pathlib import Path
 
 from sqlalchemy import create_engine, text
 
 DATABASE_URL = "postgresql://postgres:root@localhost:5432/routing_db"
+ARTIFACTS_DIR = Path(__file__).resolve().parents[1] / "artifacts"
 
 
 def get_random_node_ids(conn):
@@ -96,6 +98,8 @@ if __name__ == "__main__":
         route_results = get_route_output_by_nodes(node_a, node_b)
         if route_results:
             verify_outputs(route_results)
-            with open("random_route_output.geojson", "w") as f:
+            ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
+            output_file = ARTIFACTS_DIR / "random_route_output.geojson"
+            with output_file.open("w") as f:
                 json.dump(route_results["task_4_geojson"], f, indent=2)
-            print("Success: Randomized route saved to GeoJSON.")
+            print(f"Success: Randomized route saved to GeoJSON at {output_file}.")
