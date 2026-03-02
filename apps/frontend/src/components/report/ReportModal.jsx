@@ -15,9 +15,59 @@ export default function ReportModal({ open, onClose }) {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [processing, setProcessing] = useState(false);
+  const [reportId, setReportId] = useState(null);
+  const [resultPopup, setResultPopup] = useState(null); 
 
-  if (!open) return null;
 
+  useEffect(() => {
+
+    if (!processing || !reportId || !open) return;
+
+    const interval = setInterval(async () => {
+
+      try {
+
+        const res = await fetch(
+          `http://localhost:8000/reports/${reportId}/status`
+        );
+
+        if (!res.ok) return;
+
+        const data = await res.json();
+
+        if (data.status === "complete") {
+
+          clearInterval(interval);
+
+          setProcessing(false);
+          setResultPopup("success");
+
+          setTimeout(() => {
+            resetForm();
+            onClose();
+            setResultPopup(null);
+          }, 1500);
+        }
+
+        if (data.status === "failed") {
+
+          clearInterval(interval);
+
+          setProcessing(false);
+          setResultPopup("failed");
+        }
+
+      } catch (err) {
+        console.error(err);
+      }
+
+    }, 2000);
+
+    return () => clearInterval(interval);
+
+  }, [processing, reportId, open]);
+  
   /** Image selection handler
    * 
    * @param {*} e 
@@ -222,12 +272,12 @@ export default function ReportModal({ open, onClose }) {
             Back
             </button>
 
-            {/* Success / Error Messages */}
+            {/* Success / Error Messages
             {uploadError && (
               <p className="text-sm text-red-600 text-center">
                 {uploadError}
               </p>
-            )}
+            )} */}
 
             {uploadSuccess && (
               <p className="text-sm text-green-600 text-center">
@@ -236,15 +286,19 @@ export default function ReportModal({ open, onClose }) {
             )}
 
             <button
-              disabled={!location || uploading}
+              disabled={!location || uploading || processing}
               onClick={handleSubmit}
               className={`px-4 py-2 text-sm rounded-lg text-white ${
-                !location || uploading
+                !location || uploading || processing
                   ? "bg-gray-400 cursor-not-allowed"
                   : "bg-red-600 hover:bg-red-700"
               }`}
             >
-              {uploading ? "Submitting..." : "Submit Report"}
+              {uploading
+                ? "Uploading..."
+                : processing
+                ? "Processing..."
+                : "Submit Report"}
             </button>
 
         </div>
@@ -260,60 +314,49 @@ async function handleSubmit() {
     setUploading(true);
     setUploadError(null);
 
-    // Create report metadata
+    // ---- Step 1: Create report metadata ----
     const createResponse = await fetch(
       "http://localhost:8000/reports",
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          location: {
-            latitude: location.latitude,
-            longitude: location.longitude,
-          },
+          location,
           note: hazardLabel || "",
           user_hazard_label: hazardType,
         }),
       }
     );
 
-    if (!createResponse.ok) {
+    if (!createResponse.ok)
       throw new Error("Failed to create report");
-    }
 
     const createData = await createResponse.json();
-    const reportId = createData.report_id;
+    const newReportId = createData.report_id;
 
-    // Upload image
+    setReportId(newReportId);
+
+    // ---- Step 2: Upload Image ----
     const formData = new FormData();
     formData.append("image", imageFile);
 
     const uploadResponse = await fetch(
-      `http://localhost:8000/reports/${reportId}/image`,
+      `http://localhost:8000/reports/${newReportId}/image`,
       {
         method: "POST",
         body: formData,
       }
     );
 
-    if (!uploadResponse.ok) {
+    if (!uploadResponse.ok)
       throw new Error("Image upload failed");
-    }
 
-    setUploadSuccess(true);
-
-    // Optional: reset after short delay
-    setTimeout(() => {
-      resetForm();
-      onClose();
-    }, 1500);
+    // ---- Step 3: Transition State ----
+    setUploading(false);
+    setProcessing(true);
 
   } catch (err) {
-    console.error(err);
     setUploadError(err.message);
-  } finally {
     setUploading(false);
   }
 }
@@ -328,7 +371,8 @@ function resetForm() {
   setUploadError(null);
   setUploadSuccess(false);
 }
-
+    
+  if (!open) return null;
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
 
@@ -345,6 +389,26 @@ function resetForm() {
             {stage === 1 && renderPhotoStage()}
             {stage === 2 && renderLocationStage()}
         </div>
+        {resultPopup && (
+          <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-60">
+
+            <div className="bg-white p-6 rounded-xl text-center space-y-4">
+
+              {resultPopup === "success" && (
+                <p className="text-green-600 font-semibold">
+                  Report submitted successfully 🎉
+                </p>
+              )}
+
+              {resultPopup === "failed" && (
+                <p className="text-red-600 font-semibold">
+                  Processing failed. Please try again.
+                </p>
+              )}
+
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
