@@ -1,1 +1,1 @@
-from .inference import predict_hazard
+"""Hazard classification package."""
