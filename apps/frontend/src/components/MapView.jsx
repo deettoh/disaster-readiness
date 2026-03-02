@@ -4,6 +4,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { MAPTILER_KEY } from "../api/config";
 import { hazardsToGeoJSON } from "../utils/geojson";
 import { mergeReadinessIntoGeoJSON } from "../utils/geojson";
+import { shelterCSVToGeoJSON } from "../utils/geojson";
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -32,6 +33,8 @@ export default function MapView({ onHazardClick }) {
 
       const readinessGeoJSON = await loadReadiness();
       addReadinessLayer(map, readinessGeoJSON);
+
+      await addShelterLayer(map);
 
     } catch (err) {
       console.error("Failed to initialize layers:", err);
@@ -223,4 +226,44 @@ function addReadinessLayer(map, geojson) {
       "line-opacity": 0.1
     }
   });
+}
+
+async function addShelterLayer(map) {
+
+  const geojson = await shelterCSVToGeoJSON(
+    "/data/shelters.csv"
+  );
+
+  map.addSource("shelter-source", {
+    type: "geojson",
+    data: geojson
+  });
+
+  map.addLayer({
+    id: "shelter-layer",
+    type: "circle",
+    source: "shelter-source",
+    paint: {
+      "circle-radius": 8,
+      "circle-color": "#0ea5e9",
+      "circle-stroke-width": 2,
+      "circle-stroke-color": "#ffffff"
+    }
+  });
+
+  /* Popup interaction */
+  map.on("click", "shelter-layer", (e) => {
+
+    const props = e.features[0].properties;
+
+    new maplibregl.Popup()
+      .setLngLat(e.lngLat)
+      .setHTML(`
+        <strong>🏠 Shelter</strong><br/>
+        ${props.name}
+      `)
+      .addTo(map);
+
+  });
+
 }

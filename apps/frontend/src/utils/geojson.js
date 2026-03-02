@@ -1,3 +1,4 @@
+import Papa from "papaparse";
 /** 
  * Convert API hazard response to GeoJSON format for MapLibre
  * 
@@ -63,4 +64,39 @@ export function mergeReadinessIntoGeoJSON(
   });
 
   return geojson;
+}
+/**
+ *  Convert shelter CSV data to GeoJSON format for MapLibre
+ * @param {*} csvPath 
+ * @returns 
+ */
+export async function shelterCSVToGeoJSON(csvPath) {
+
+  const response = await fetch(csvPath);
+  const csvText = await response.text();
+
+  const parsed = Papa.parse(csvText, {
+    header: true,
+    skipEmptyLines: true
+  });
+
+  const features = parsed.data.map(row => ({
+    type: "Feature",
+    properties: {
+      shelter_id: row.shelter_id,
+      name: row.name
+    },
+    geometry: {
+      type: "Point",
+      coordinates: [
+        parseFloat(row.lon),
+        parseFloat(row.lat)
+      ]
+    }
+  }));
+
+  return {
+    type: "FeatureCollection",
+    features
+  };
 }
