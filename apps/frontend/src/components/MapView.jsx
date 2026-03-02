@@ -5,7 +5,7 @@ import { MAPTILER_KEY } from "../api/config";
 import { hazardsToGeoJSON } from "../utils/geojson";
 import { mergeReadinessIntoGeoJSON } from "../utils/geojson";
 import { shelterCSVToGeoJSON } from "../utils/geojson";
-
+import LegendPanel from "./LegendPanel";
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -28,11 +28,15 @@ export default function MapView({ onHazardClick }) {
 
   map.on("load", async () => {
     try {
-      const hazardGeoJSON = await loadHazards();
-      addHazardLayer(map, hazardGeoJSON, onHazardClick);
+      const routeRes = await fetch("/data/pj_routes.geojson");
+      const routeGeoJSON = await routeRes.json();
+      addRouteLayer(map, routeGeoJSON);
 
       const readinessGeoJSON = await loadReadiness();
       addReadinessLayer(map, readinessGeoJSON);
+
+      const hazardGeoJSON = await loadHazards();
+      addHazardLayer(map, hazardGeoJSON, onHazardClick);
 
       await addShelterLayer(map);
 
@@ -49,7 +53,15 @@ export default function MapView({ onHazardClick }) {
   };
 }, []);
 
-  return <div ref={mapContainer} className="w-full h-full" />;
+  return (
+    <div className="relative w-full h-full">
+
+      <div ref={mapContainer} className="w-full h-full" />
+
+      <LegendPanel />
+
+    </div>
+  );
 }
 
 /*
@@ -230,40 +242,116 @@ function addReadinessLayer(map, geojson) {
 
 async function addShelterLayer(map) {
 
-  const geojson = await shelterCSVToGeoJSON(
-    "/data/shelters.csv"
-  );
+  const geojson = await shelterCSVToGeoJSON("/pj_shelters.csv");
 
-  map.addSource("shelter-source", {
-    type: "geojson",
-    data: geojson
-  });
+  if (!map.getSource("shelter-source")) {
+    map.addSource("shelter-source", {
+      type: "geojson",
+      data: geojson
+    });
+  } else {
+    map.getSource("shelter-source").setData(geojson);
+  }
 
+  if (!map.getLayer("shelter-layer")) {
+
+    map.addLayer({
+      id: "shelter-layer",
+      type: "circle",
+      source: "shelter-source",
+      paint: {
+        "circle-radius": 7,
+        "circle-color": "#3b82f6",      // blue fill
+        "circle-stroke-color": "#ffffff", // white outer border
+        "circle-stroke-width": 2
+      }
+    });
+
+  }
+
+  map.off("click", "shelter-layer", shelterPopupHandler);
+  map.on("click", "shelter-layer", shelterPopupHandler);
+}
+
+function shelterPopupHandler(e) {
+
+  if (!e.features || !e.features.length) return;
+
+  const props = e.features[0].properties;
+
+  new maplibregl.Popup()
+    .setLngLat(e.lngLat)
+    .setHTML(`
+      <strong>Shelter</strong><br/>
+      ${props.name ?? "Unknown shelter"}
+    `)
+    .addTo(e.target);
+}
+
+function addRouteLayer(map, geojson) {
+
+  if (!map.getSource("route-source")) {
+    map.addSource("route-source", {
+      type: "geojson",
+      data: geojson
+    });
+  } else {
+    map.getSource("route-source").setData(geojson);
+  }
+
+  /* Remove existing layers first (important) */
+  if (map.getLayer("route-shadow-layer")) {
+    map.removeLayer("route-shadow-layer");
+  }
+
+  if (map.getLayer("route-layer")) {
+    map.removeLayer("route-layer");
+  }
+
+  /* Shadow layer */
   map.addLayer({
-    id: "shelter-layer",
-    type: "circle",
-    source: "shelter-source",
+    id: "route-shadow-layer",
+    type: "line",
+    source: "route-source",
+    layout: {
+      "line-cap": "round",
+      "line-join": "round"
+    },
     paint: {
-      "circle-radius": 8,
-      "circle-color": "#0ea5e9",
-      "circle-stroke-width": 2,
-      "circle-stroke-color": "#ffffff"
+      "line-color": "#1e40af",
+      "line-width": [
+        "interpolate",
+        ["linear"],
+        ["zoom"],
+        10, 2,
+        14, 4,
+        18, 6
+      ],
+      "line-opacity": 0.35,
+      "line-blur": 1.5
     }
   });
 
-  /* Popup interaction */
-  map.on("click", "shelter-layer", (e) => {
-
-    const props = e.features[0].properties;
-
-    new maplibregl.Popup()
-      .setLngLat(e.lngLat)
-      .setHTML(`
-        <strong>🏠 Shelter</strong><br/>
-        ${props.name}
-      `)
-      .addTo(map);
-
+  /* Main route layer */
+  map.addLayer({
+    id: "route-layer",
+    type: "line",
+    source: "route-source",
+    layout: {
+      "line-cap": "round",
+      "line-join": "round"
+    },
+    paint: {
+      "line-color": "#5773a0",
+      "line-width": [
+        "interpolate",
+        ["linear"],
+        ["zoom"],
+        10, 1.5,
+        14, 2.5,
+        18, 4
+      ],
+      "line-opacity": 0.7
+    }
   });
-
 }
