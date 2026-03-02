@@ -9,15 +9,12 @@ export default function ReportModal({ open, onClose }) {
 
   const [location, setLocation] = useState(null);
   const [detectingLocation, setDetectingLocation] = useState(false);
+  const [hazardType, setHazardType] = useState("fire");
+  const [hazardLabel, setHazardLabel] = useState("");
 
-  /**
-   * Detect location only in Stage 2
-   */
-  useEffect(() => {
-    if (open && stage === 2) {
-      detectLocation();
-    }
-  }, [open, stage]);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState(null);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
 
   if (!open) return null;
 
@@ -178,7 +175,44 @@ export default function ReportModal({ open, onClose }) {
             </p>
             </div>
         )}
+        {location && (
+        <div className="space-y-3 pt-3 border-t">
 
+          {/* Hazard Type Selector */}
+          <div>
+            <p className="text-sm font-medium mb-2">Select a hazard type </p>
+            <div className="flex gap-2">
+              {["fire", "flood", "landslide"].map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => setHazardType(type)}
+                  className={`px-3 py-1 rounded-full text-xs border transition
+                    ${
+                      hazardType === type
+                        ? "bg-red-600 text-white border-red-600"
+                        : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
+                    }`}
+                >
+                  {type.charAt(0).toUpperCase() + type.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+          {/* Optional Label */}
+          <div>
+            <label className="text-sm font-medium">
+              Additional Details (Optional)
+            </label>
+            <textarea
+              value={hazardLabel}
+              onChange={(e) => setHazardLabel(e.target.value)}
+              placeholder="Add extra description..."
+              className="w-full mt-1 border rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-600"
+            />
+          </div>
+        </div>
+      )}
         <div className="flex justify-end gap-2 pt-2">
 
             <button
@@ -188,21 +222,111 @@ export default function ReportModal({ open, onClose }) {
             Back
             </button>
 
+            {/* Success / Error Messages */}
+            {uploadError && (
+              <p className="text-sm text-red-600 text-center">
+                {uploadError}
+              </p>
+            )}
+
+            {uploadSuccess && (
+              <p className="text-sm text-green-600 text-center">
+                Report submitted successfully!
+              </p>
+            )}
+
             <button
-            disabled={!location}
-            className={`px-4 py-2 text-sm rounded-lg text-white ${
-                location
-                ? "bg-red-600 hover:bg-red-700"
-                : "bg-gray-400 cursor-not-allowed"
-            }`}
+              disabled={!location || uploading}
+              onClick={handleSubmit}
+              className={`px-4 py-2 text-sm rounded-lg text-white ${
+                !location || uploading
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-red-600 hover:bg-red-700"
+              }`}
             >
-            Continue
+              {uploading ? "Submitting..." : "Submit Report"}
             </button>
 
         </div>
 
         </div>
     );
+}
+/**
+ * Handle final submission of the hazard report
+ */
+async function handleSubmit() {
+  try {
+    setUploading(true);
+    setUploadError(null);
+
+    // Create report metadata
+    const createResponse = await fetch(
+      "http://localhost:8000/reports",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          location: {
+            latitude: location.latitude,
+            longitude: location.longitude,
+          },
+          note: hazardLabel || "",
+          user_hazard_label: hazardType,
+        }),
+      }
+    );
+
+    if (!createResponse.ok) {
+      throw new Error("Failed to create report");
+    }
+
+    const createData = await createResponse.json();
+    const reportId = createData.report_id;
+
+    // Upload image
+    const formData = new FormData();
+    formData.append("image", imageFile);
+
+    const uploadResponse = await fetch(
+      `http://localhost:8000/reports/${reportId}/image`,
+      {
+        method: "POST",
+        body: formData,
+      }
+    );
+
+    if (!uploadResponse.ok) {
+      throw new Error("Image upload failed");
+    }
+
+    setUploadSuccess(true);
+
+    // Optional: reset after short delay
+    setTimeout(() => {
+      resetForm();
+      onClose();
+    }, 1500);
+
+  } catch (err) {
+    console.error(err);
+    setUploadError(err.message);
+  } finally {
+    setUploading(false);
+  }
+}
+
+function resetForm() {
+  setStage(1);
+  setImageFile(null);
+  setImagePreview(null);
+  setLocation(null);
+  setHazardType("fire");
+  setHazardLabel("");
+  setUploadError(null);
+  setUploadSuccess(false);
 }
 
   return (
