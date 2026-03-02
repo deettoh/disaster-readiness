@@ -1,2 +1,1 @@
-"""Service protocols and mock implementations for integration seams."""
-
+"""Service layer for business logic."""
