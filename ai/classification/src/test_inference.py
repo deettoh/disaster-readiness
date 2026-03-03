@@ -1,7 +1,4 @@
-"""Test script for hazard classification model inference.
-
-This module tests the hazard classification model's predictions on a sample image.
-"""
+"""Test script for hazard classification model inference."""
 
 import os
 

@@ -1,8 +1,4 @@
-"""Hazard classification inference module.
-
-This module provides functionality to predict hazard types from images
-using a trained deep learning model.
-"""
+"""Hazard classification inference module."""
 
 from pathlib import Path
 
