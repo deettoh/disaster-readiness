@@ -27,7 +27,14 @@ class ReportRepository(Protocol):
 class QueueClient(Protocol):
     """Queue interface for background jobs."""
 
-    async def enqueue_image_processing(self, report_id: str) -> str:
+    async def enqueue_image_processing(
+        self,
+        report_id: str,
+        *,
+        image_payload_b64: str | None = None,
+        filename: str | None = None,
+        content_type: str | None = None,
+    ) -> str:
         """Enqueue report image-processing and return a job identifier."""
         ...
 

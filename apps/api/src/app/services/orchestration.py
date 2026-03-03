@@ -31,12 +31,24 @@ class ReportOrchestrationService:
         """Return queue backend availability."""
         return await self._queue_client.ping()
 
-    async def enqueue_report_image_processing(self, report_id: UUID) -> ReportStatusResponse:
+    async def enqueue_report_image_processing(
+        self,
+        report_id: UUID,
+        *,
+        image_payload_b64: str | None = None,
+        filename: str | None = None,
+        content_type: str | None = None,
+    ) -> ReportStatusResponse:
         """Enqueue image processing with retry and status tracking."""
         last_error: str | None = None
         for attempt in range(1, self._enqueue_max_attempts + 1):
             try:
-                job_id = await self._queue_client.enqueue_image_processing(str(report_id))
+                job_id = await self._queue_client.enqueue_image_processing(
+                    str(report_id),
+                    image_payload_b64=image_payload_b64,
+                    filename=filename,
+                    content_type=content_type,
+                )
                 return await self._status_store.mark_processing(
                     report_id,
                     job_id=job_id,

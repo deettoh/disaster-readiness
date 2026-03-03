@@ -40,12 +40,30 @@ class RQQueueClient:
         except Exception:
             return False
 
-    async def enqueue_image_processing(self, report_id: str) -> str:
+    async def enqueue_image_processing(
+        self,
+        report_id: str,
+        *,
+        image_payload_b64: str | None = None,
+        filename: str | None = None,
+        content_type: str | None = None,
+    ) -> str:
         """Enqueue report image processing job in RQ."""
+        if not image_payload_b64:
+            raise ExternalServiceError(
+                service="rq",
+                message="missing image payload for worker job",
+                details={"report_id": report_id},
+            )
         try:
             job = self._queue.enqueue(
                 "worker.jobs.process_report_image",
-                kwargs={"report_id": report_id},
+                kwargs={
+                    "report_id": report_id,
+                    "image_payload_b64": image_payload_b64,
+                    "filename": filename,
+                    "content_type": content_type,
+                },
                 retry=self._retry,
             )
         except Exception as exc:
