@@ -4,6 +4,7 @@ from sqlalchemy import create_engine, text
 
 DATABASE_URL = "postgresql://postgres:root@localhost:5432/routing_db"
 
+
 def build_topology():
     """Sets up the road network topology and generates a junction-aware vertex table."""
     engine = create_engine(DATABASE_URL)
@@ -52,6 +53,11 @@ def build_topology():
             # Verification
             check_sql = "SELECT cnt, count(*) FROM pj_roads_vertices_pgr GROUP BY cnt ORDER BY cnt LIMIT 5;"
             res = conn.execute(text(check_sql)).fetchall()
+            res = conn.execute(
+                text(
+                    "SELECT cnt, count(*) FROM pj_roads_vertices_pgr GROUP BY cnt ORDER BY cnt LIMIT 5;"
+                )
+            ).fetchall()
             print("\nConnectivity Summary:")
             for row in res:
                 print(f" - {row[0]}-way connections: {row[1]} nodes")
@@ -59,6 +65,7 @@ def build_topology():
         except Exception as e:
             conn.rollback()
             print(f"FAILED: {e}")
+
 
 if __name__ == "__main__":
     build_topology()

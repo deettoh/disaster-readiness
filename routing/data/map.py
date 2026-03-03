@@ -1,9 +1,12 @@
 """Fetches road geometries from PostGIS and generates a map visualization of Petaling Jaya."""
 
+from pathlib import Path
+
 import geopandas as gpd
 import matplotlib.pyplot as plt
 from sqlalchemy import create_engine
 
+# Database Connection Settings
 DB_USER = "postgres"
 DB_PASS = "root"
 DB_HOST = "localhost"
@@ -11,6 +14,8 @@ DB_PORT = "5432"
 DB_NAME = "routing_db"
 
 DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+ARTIFACTS_DIR = Path(__file__).resolve().parents[1] / "artifacts"
+
 
 def visualize_full_map():
     """Loads road data from PostGIS and generates a color-coded map image."""
@@ -23,7 +28,7 @@ def visualize_full_map():
     query = "SELECT geometry, highway FROM pj_roads"
 
     print("Loading road geometries into memory...")
-    gdf = gpd.read_postgis(query, engine, geom_col='geometry')
+    gdf = gpd.read_postgis(query, engine, geom_col="geometry")
 
     print(f"Loaded {len(gdf)} road segments.")
 
@@ -32,6 +37,7 @@ def visualize_full_map():
 
     print("Rendering map...")
 
+    # Fixed: Removed duplicate keyword arguments and syntax errors
     gdf.plot(
         ax=ax,
         column='highway',
@@ -43,14 +49,17 @@ def visualize_full_map():
 
     # Final Formatting
     ax.set_title("Full Road Network Extraction: Petaling Jaya", fontsize=15)
-    ax.set_axis_off()  # Hide latitude/longitude coordinates for a cleaner look
+    ax.set_axis_off()  # Hide coordinates for a cleaner look
 
     # Save the result
-    output_file = "pj_full_map_visualization.png"
-    plt.savefig(output_file, dpi=300, bbox_inches='tight')
+    ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
+    output_path = ARTIFACTS_DIR / "pj_full_map_visualization.png"
 
-    print(f"Visualization saved as: {output_file}")
+    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+
+    print(f"Visualization saved as: {output_path}")
     plt.show()
+
 
 if __name__ == "__main__":
     try:

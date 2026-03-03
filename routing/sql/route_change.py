@@ -13,18 +13,18 @@ class RouteHazardVerifier:
     def __init__(self):
         """Initializes database connection and managers."""
         self.engine = create_engine(DATABASE_URL)
+
+        # Initialize Penalty Manager (this one usually takes the engine)
         self.rpm = RadiusPenaltyManager(self.engine)
+
+        # FIXED: Initialize HazardUpdater without arguments to satisfy the "0 positional" rule
         self.updater = HazardUpdater()
 
-    def verify_route_change(self, start_coords, end_coords, hazard_coords, hazard_type):
-        """Calculates a baseline route, applies a hazard, and verifies the change.
+        # If HazardUpdater needs the engine to work, it often looks for a setter:
+        # self.updater.engine = self.engine
 
-        Args:
-            start_coords (tuple): (lat, lon) for start.
-            end_coords (tuple): (lat, lon) for end.
-            hazard_coords (tuple): (lat, lon) for hazard center.
-            hazard_type (str): Type of hazard to apply.
-        """
+    def verify_route_change(self, start_coords, end_coords, hazard_coords, hazard_type):
+        """Calculates a baseline route, applies a hazard, and verifies the change."""
         # Clear existing penalties to ensure a clean baseline
         self.rpm.reset_all_penalties()
 
@@ -32,19 +32,21 @@ class RouteHazardVerifier:
         print("--- Calculating Baseline Route ---")
         baseline = get_route(
             start_coords[0], start_coords[1],
-            end_coords[0], end_coords[1]
+            end_coords[0], end_coords[1],
+            engine=self.engine # Required keyword argument
         )
 
-        if baseline["status"] == "error":
+        if baseline.get("status") == "error":
             print(f"Baseline Error: {baseline.get('message', 'Unknown error')}")
             return
 
-        # Explicitly cast to float to prevent operator unsupported errors
         base_time = float(baseline.get("eta_minutes", 0.0))
         print(f"Baseline ETA: {base_time} minutes")
 
-        # Apply Hazard (e.g., Landslide with 1.0 confidence for maximum impact)
+        # Apply Hazard
         print(f"\n--- Simulating {hazard_type.upper()} event ---")
+        # NOTE: If apply_hazard_event throws an 'engine' error here,
+        # pass it as: self.updater.apply_hazard_event(..., engine=self.engine)
         self.updater.apply_hazard_event(
             hazard_coords[0], hazard_coords[1],
             radius=600,
@@ -56,14 +58,14 @@ class RouteHazardVerifier:
         print("\n--- Calculating Risk-Aware Route ---")
         post_hazard = get_route(
             start_coords[0], start_coords[1],
-            end_coords[0], end_coords[1]
+            end_coords[0], end_coords[1],
+            engine=self.engine # Required keyword argument
         )
 
-        if post_hazard["status"] == "error":
+        if post_hazard.get("status") == "error":
             print(f"Post-Hazard Error: {post_hazard.get('message', 'Unknown error')}")
             return
 
-        # Explicitly cast to float to ensure mathematical subtraction works
         hazard_time = float(post_hazard.get("eta_minutes", 0.0))
         print(f"Post-Hazard ETA: {hazard_time} minutes")
 
@@ -74,22 +76,18 @@ class RouteHazardVerifier:
         if hazard_time > base_time:
             print("SUCCESS: Route metrics updated.")
             print(f"Impact: Travel time increased by {round(time_diff, 2)} minutes.")
-            print("The routing engine successfully accounted for the hazard penalty.")
         elif hazard_time == base_time:
-            print("OBSERVATION: Travel time remained identical.")
-            print("The hazard may not be on the primary path or the penalty was insufficient.")
+            print("OBSERVATION: Travel time identical. Hazard might be off-path.")
         else:
-            print("WARNING: Post-hazard route is faster. Check cost calculation logic.")
+            print("WARNING: Post-hazard route is faster. Check cost logic.")
 
         # Cleanup
         self.rpm.reset_all_penalties()
 
 def run_route_change_verification():
-    """Executes the full test suite for C3 Task 6."""
+    """Executes the full test suite."""
     verifier = RouteHazardVerifier()
 
-    # Test Locations: Mutiara Damansara to PJ State
-    # Hazard: Placed in Section 14 (likely intersection)
     MD_START = (3.155, 101.609)
     PJS_END = (3.100, 101.645)
     HAZARD_LOC = (3.110, 101.635)

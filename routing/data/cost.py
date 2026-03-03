@@ -4,6 +4,7 @@ from sqlalchemy import create_engine, text
 
 DATABASE_URL = "postgresql://postgres:root@localhost:5432/routing_db"
 
+
 def compute_and_initialize_costs():
     """Calculates travel times, initializes risk penalties, and totals aggregate costs."""
     engine = create_engine(DATABASE_URL)
@@ -16,7 +17,7 @@ def compute_and_initialize_costs():
         ALTER TABLE pj_roads ADD COLUMN IF NOT EXISTS agg_reverse_cost DOUBLE PRECISION;
     """
 
-    # COMPUTE BASE COST
+    # COMPUTE BASE COST (Speed converted to m/s)
     base_cost_sql = """
         UPDATE pj_roads
         SET base_cost = COALESCE(length / (
@@ -62,7 +63,9 @@ def compute_and_initialize_costs():
             conn.commit()
 
             # --- SAFE VERIFICATION ---
-            check_res = conn.execute(text("SELECT COUNT(*) FROM pj_roads WHERE agg_cost IS NULL;")).fetchone()
+            check_res = conn.execute(
+                text("SELECT COUNT(*) FROM pj_roads WHERE agg_cost IS NULL;")
+            ).fetchone()
             null_count = check_res[0] if check_res else 0
 
             if null_count == 0:
@@ -78,9 +81,9 @@ def compute_and_initialize_costs():
                 stats_res = conn.execute(text(stats_query)).fetchone()
 
                 if stats_res:
-                    avg_base = stats_res[0] if stats_res[0] is not None else 0
-                    avg_risk = stats_res[1] if stats_res[1] is not None else 0
-                    avg_total = stats_res[2] if stats_res[2] is not None else 0
+                    avg_base = stats_res[0] or 0
+                    avg_risk = stats_res[1] or 0
+                    avg_total = stats_res[2] or 0
 
                     print("\nStats Report:")
                     print(f" - Avg Base Cost: {round(float(avg_base), 2)}s")
@@ -92,6 +95,7 @@ def compute_and_initialize_costs():
         except Exception as e:
             conn.rollback()
             print(f"Error during execution: {e}")
+
 
 if __name__ == "__main__":
     compute_and_initialize_costs()

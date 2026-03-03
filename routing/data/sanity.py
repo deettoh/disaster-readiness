@@ -4,6 +4,7 @@ from sqlalchemy import create_engine, text
 
 DATABASE_URL = "postgresql://postgres:root@localhost:5432/routing_db"
 
+
 def run_sanity_checks():
     """Checks for broken road links, analyzes junctions, and runs a test route."""
     engine = create_engine(DATABASE_URL)
@@ -24,7 +25,9 @@ def run_sanity_checks():
             if missing_src == 0 and missing_tgt == 0:
                 print("Topology is clean: All edge endpoints exist in vertex table.")
             else:
-                print(f"Integrity Issue: {missing_src} missing sources, {missing_tgt} missing targets.")
+                print(
+                    f"Integrity Issue: {missing_src} missing sources, {missing_tgt} missing targets."
+                )
 
     # [2/3] JUNCTION ANALYSIS
     print("\n[2/3] Analyzing Junction Complexity...")
@@ -32,7 +35,9 @@ def run_sanity_checks():
         island_query = "SELECT cnt, COUNT(*) as node_count FROM pj_roads_vertices_pgr GROUP BY cnt ORDER BY cnt;"
         rows = conn.execute(text(island_query)).fetchall()
         for row in rows:
-            desc = "Dead-end/Cul-de-sac" if row[0] == 1 else f"{row[0]}-way Intersection"
+            desc = (
+                "Dead-end/Cul-de-sac" if row[0] == 1 else f"{row[0]}-way Intersection"
+            )
             print(f" - {desc}: {row[1]} nodes")
 
     # [3/3] RANDOMIZED DIJKSTRA VERIFICATION
@@ -74,8 +79,11 @@ def run_sanity_checks():
                 print("Dijkstra calculation successful!")
                 print("-----------------------------------")
                 print(f"Path:     Node {start_n} ➔ {end_n}")
+                print(f"Path:    Node {start_n} ➔ {end_n}")
                 print(f"Distance:  {dist_km:.2f} km")
-                print(f"Time:      {round(time_sec, 2)}s ({round(time_sec/60, 2)} mins)")
+                print(
+                    f"Time:      {round(time_sec, 2)}s ({round(time_sec / 60, 2)} mins)"
+                )
                 print(f"Avg Speed: {round(avg_speed, 2)} km/h")
                 print("-----------------------------------")
             else:
@@ -85,6 +93,7 @@ def run_sanity_checks():
             print(f"Pathfinding logic failed: {e}")
 
     print("\n--- Sanity Checks Completed ---")
+
 
 if __name__ == "__main__":
     run_sanity_checks()

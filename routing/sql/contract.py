@@ -1,16 +1,21 @@
-"""Provides a standardized query contract that returns distance, ETA, and GeoJSON geometries for any PJ coordinate pair."""
+"""Provides standardized routing contract helpers for backend integration."""
+
+from __future__ import annotations
 
 import json
 import logging
 import os
+from typing import Any
 
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
+from sqlalchemy.engine import Engine
+from sqlalchemy.exc import SQLAlchemyError
 
 # 1. Load Environment Variables
 load_dotenv()
 
-# Database Setup
+# Database Setup (Internal default engine)
 DB_USER = os.getenv("DB_USER", "postgres")
 DB_PASS = os.getenv("DB_PASS", "root")
 DB_HOST = os.getenv("DB_HOST", "localhost")
@@ -18,7 +23,7 @@ DB_PORT = os.getenv("DB_PORT", "5432")
 DB_NAME = os.getenv("DB_NAME", "routing_db")
 
 DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-engine = create_engine(DATABASE_URL)
+default_engine = create_engine(DATABASE_URL)
 
 # Bounding Box (Defaults to Petaling Jaya area)
 PJ_BOUNDS = {
@@ -28,8 +33,8 @@ PJ_BOUNDS = {
     "max_lon": float(os.getenv("PJ_MAX_LON", 101.66))
 }
 
-def validate_coordinates(lat, lon):
-    """Checks if coordinates are within the PJ service area defined in .env."""
+def validate_coordinates(lat: float, lon: float) -> tuple[bool, str]:
+    """Checks if coordinates are within the PJ service area."""
     if lat is None or lon is None:
         return False, "Coordinates cannot be null."
 
@@ -41,69 +46,65 @@ def validate_coordinates(lat, lon):
 
     return True, "Valid"
 
-def get_route(start_lat, start_lon, end_lat, end_lon, algorithm="dijkstra"):
-    """Official Routing Query Contract (For Member A).
-    Input:
-        start_lat, start_lon
-        end_lat, end_lon
-        algorithm: "dijkstra" or "astar"
-    Returns:
-        {
-            "status": "success" | "error",
-            "distance_km": float,
-            "eta_minutes": float,
-            "geojson": {...}
-        }.
-    """  # noqa: D205
-    # 1. Validation
+def _normalize_algorithm(algorithm: str) -> str:
+    """Validate and normalize algorithm name."""
+    normalized = algorithm.lower()
+    if normalized not in {"dijkstra", "astar"}:
+        raise ValueError("algorithm must be one of: dijkstra, astar")
+    return normalized
+
+def get_route(  # noqa: D417
+    start_lat: float,
+    start_lon: float,
+    end_lat: float,
+    end_lon: float,
+    algorithm: str = "dijkstra",
+    engine: Engine | None = None
+) -> dict[str, Any]:
+    """Standardized Routing Contract.
+
+    Args:
+        start_lat, start_lon: Start coordinates.
+        end_lat, end_lon: End coordinates.
+        algorithm: "dijkstra" or "astar".
+        engine: Optional SQLAlchemy engine. Uses default if None.
+    """
+    # 1. Coordinate Validation
     for label, lat, lon in [("Start", start_lat, start_lon), ("End", end_lat, end_lon)]:
         is_valid, msg = validate_coordinates(lat, lon)
         if not is_valid:
             return {"status": "error", "error_type": "VALIDATION_ERROR", "message": f"{label}: {msg}"}
 
+    # Use provided engine or fall back to default
+    routing_engine = engine or default_engine
+    normalized_alg = _normalize_algorithm(algorithm)
+
     try:
-        with engine.connect() as conn:
-            # 2. Snap Coordinates to Nearest Road Nodes
-            snap_sql = """
+        with routing_engine.connect() as conn:
+            # Snap Coordinates
+            snap_sql = text("""
                 SELECT id FROM pj_roads_vertices_pgr
                 ORDER BY the_geom <-> ST_SetSRID(ST_Point(:lon, :lat), 4326)
                 LIMIT 1;
-            """
+            """)
 
-            start_node = conn.execute(text(snap_sql), {"lon": start_lon, "lat": start_lat}).fetchone()
-            end_node = conn.execute(text(snap_sql), {"lon": end_lon, "lat": end_lat}).fetchone()
+            start_node_row = conn.execute(snap_sql, {"lon": start_lon, "lat": start_lat}).fetchone()
+            end_node_row = conn.execute(snap_sql, {"lon": end_lon, "lat": end_lat}).fetchone()
 
-            if not start_node or not end_node:
-                return {"status": "error", "message": "Could not locate nearest road nodes."}
+            if not start_node_row or not end_node_row:
+                return {"status": "error", "message": "Could not snap coordinates to road network."}
 
-            u, v = start_node[0], end_node[0]
+            u, v = start_node_row[0], end_node_row[0]
 
             if u == v:
                 return {"status": "success", "distance_km": 0.0, "eta_minutes": 0.0, "geojson": None}
 
-            # 3. Dynamic Algorithm Configuration
-            if algorithm.lower() == "astar":
-                pgr_func = "pgr_astar"
-                inner_query = """
-                    SELECT id, source, target, agg_cost AS cost, agg_reverse_cost AS reverse_cost,
-                    ST_X(ST_StartPoint(geometry)) AS x1, ST_Y(ST_StartPoint(geometry)) AS y1,
-                    ST_X(ST_EndPoint(geometry)) AS x2, ST_Y(ST_EndPoint(geometry)) AS y2
-                    FROM pj_roads
-                """
-                params = {"start": u, "end": v, "heuristic": 5}
-                extra_args = ", heuristic := :heuristic"
-            else:
-                pgr_func = "pgr_dijkstra"
-                inner_query = "SELECT id, source, target, agg_cost AS cost, agg_reverse_cost AS reverse_cost FROM pj_roads"
-                params = {"start": u, "end": v}
-                extra_args = ""
-
-            # 4. Execute Pathfinding and Geometry Aggregation
-            routing_sql = f"""
+            # Execute pgRouting
+            route_sql = text(f"""
                 WITH path AS (
-                    SELECT * FROM {pgr_func}(
-                        '{inner_query}',
-                        :start, :end, directed := true {extra_args}
+                    SELECT * FROM pgr_{normalized_alg}(
+                        'SELECT id, source, target, agg_cost AS cost, agg_reverse_cost AS reverse_cost FROM pj_roads',
+                        :start, :end, directed := true
                     )
                 ),
                 route_segments AS (
@@ -117,14 +118,14 @@ def get_route(start_lat, start_lon, end_lat, end_lon, algorithm="dijkstra"):
                     COALESCE(SUM(agg_cost), 0) as total_time_s,
                     ST_AsGeoJSON(ST_LineMerge(ST_Collect(geometry))) as geojson_geom
                 FROM route_segments;
-            """
+            """)
 
-            result = conn.execute(text(routing_sql), params).fetchone()
+            result = conn.execute(route_sql, {"start": u, "end": v}).fetchone()
 
             if not result or result[2] is None:
                 return {"status": "error", "message": "No route found between selected points."}
 
-            # 5. Success Response
+            # Build Response
             return {
                 "status": "success",
                 "distance_km": round(float(result[0]) / 1000, 2),
@@ -135,11 +136,14 @@ def get_route(start_lat, start_lon, end_lat, end_lon, algorithm="dijkstra"):
                     "properties": {
                         "source_node": u,
                         "target_node": v,
-                        "algorithm": algorithm
+                        "algorithm": normalized_alg
                     }
                 }
             }
 
+    except SQLAlchemyError as e:
+        logging.error(f"Database error in get_route: {e}")
+        return {"status": "error", "message": "Routing engine database error."}
     except Exception as e:
-        logging.error(f"Critical error in get_route: {e}")
-        return {"status": "error", "message": "The routing engine encountered an internal database error."}
+        logging.error(f"Unexpected error in get_route: {e}")
+        return {"status": "error", "message": str(e)}

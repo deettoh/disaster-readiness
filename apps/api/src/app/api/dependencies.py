@@ -5,6 +5,10 @@ from fastapi import Depends, Request
 from app.core.config import Settings, get_settings
 from app.core.exceptions import RateLimitExceededError
 from app.core.rate_limit import InMemoryRateLimiter
+from app.repositories.alert_repository import SQLAlertRepository
+from app.repositories.hazard_repository import SQLHazardRepository
+from app.repositories.readiness_repository import SQLReadinessRepository
+from app.repositories.report_repository import SQLReportRepository
 from app.services.interfaces import (
     AlertQueryService,
     HazardQueryService,
@@ -27,13 +31,19 @@ from app.services.mocks import (
 )
 from app.services.orchestration import ReportOrchestrationService
 from app.services.queue_backends import RQQueueClient
+from app.services.routing_sql import SQLRoutingService
 
 _report_repo = MockReportRepository()
 _mock_queue_client = MockQueueClient()
 _hazard_service = MockHazardService()
 _readiness_service = MockReadinessService()
 _alert_service = MockAlertService()
-_routing_service = MockRoutingService()
+_mock_routing_service = MockRoutingService()
+_sql_report_repository: SQLReportRepository | None = None
+_sql_hazard_service: SQLHazardRepository | None = None
+_sql_readiness_service: SQLReadinessRepository | None = None
+_sql_alert_service: SQLAlertRepository | None = None
+_sql_routing_service: SQLRoutingService | None = None
 _status_store = MockReportStatusStore()
 _post_processing_hooks = MockPostProcessingHooks()
 _rq_queue_client: RQQueueClient | None = None
@@ -53,7 +63,16 @@ def _get_client_identity(request: Request) -> str:
 
 def get_report_repository() -> ReportRepository:
     """Return the report repository dependency."""
-    return _report_repo
+    settings = get_settings()
+    if settings.data_backend == "mock":
+        return _report_repo
+
+    global _sql_report_repository
+    if _sql_report_repository is None:
+        _sql_report_repository = SQLReportRepository(
+            database_url=settings.data_database_url
+        )
+    return _sql_report_repository
 
 
 def get_queue_client() -> QueueClient:
@@ -76,22 +95,57 @@ def get_queue_client() -> QueueClient:
 
 def get_hazard_service() -> HazardQueryService:
     """Return the hazard query dependency."""
-    return _hazard_service
+    settings = get_settings()
+    if settings.data_backend == "mock":
+        return _hazard_service
+
+    global _sql_hazard_service
+    if _sql_hazard_service is None:
+        _sql_hazard_service = SQLHazardRepository(
+            database_url=settings.data_database_url
+        )
+    return _sql_hazard_service
 
 
 def get_readiness_service() -> ReadinessQueryService:
     """Return the readiness query dependency."""
-    return _readiness_service
+    settings = get_settings()
+    if settings.data_backend == "mock":
+        return _readiness_service
+
+    global _sql_readiness_service
+    if _sql_readiness_service is None:
+        _sql_readiness_service = SQLReadinessRepository(
+            database_url=settings.data_database_url
+        )
+    return _sql_readiness_service
 
 
 def get_alert_service() -> AlertQueryService:
     """Return the alert query dependency."""
-    return _alert_service
+    settings = get_settings()
+    if settings.data_backend == "mock":
+        return _alert_service
+
+    global _sql_alert_service
+    if _sql_alert_service is None:
+        _sql_alert_service = SQLAlertRepository(database_url=settings.data_database_url)
+    return _sql_alert_service
 
 
 def get_routing_service() -> RoutingService:
     """Return the routing service dependency."""
-    return _routing_service
+    settings = get_settings()
+    if settings.routing_backend == "mock":
+        return _mock_routing_service
+
+    global _sql_routing_service
+    if _sql_routing_service is None:
+        _sql_routing_service = SQLRoutingService(
+            database_url=settings.routing_database_url,
+            algorithm=settings.routing_algorithm,
+        )
+    return _sql_routing_service
 
 
 def get_report_status_store() -> ReportStatusStore:

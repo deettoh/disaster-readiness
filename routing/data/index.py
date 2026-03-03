@@ -10,6 +10,7 @@ DB_NAME = "routing_db"
 
 DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
+
 def apply_routing_indexes():
     """Creates indexes on road tables and verifies they are active."""
     engine = create_engine(DATABASE_URL)
@@ -20,7 +21,7 @@ def apply_routing_indexes():
         "source_idx": "CREATE INDEX IF NOT EXISTS pj_roads_source_idx ON pj_roads (source);",
         "target_idx": "CREATE INDEX IF NOT EXISTS pj_roads_target_idx ON pj_roads (target);",
         "cost_idx": "CREATE INDEX IF NOT EXISTS pj_roads_cost_idx ON pj_roads (agg_cost);",
-        "vertices_idx": "CREATE INDEX IF NOT EXISTS pj_roads_vertices_geom_idx ON pj_roads_vertices_pgr USING GIST (the_geom);"
+        "vertices_idx": "CREATE INDEX IF NOT EXISTS pj_roads_vertices_geom_idx ON pj_roads_vertices_pgr USING GIST (the_geom);",
     }
 
     print("--- Finalizing Routing Indexes ---")
@@ -54,6 +55,7 @@ def apply_routing_indexes():
             print("No indexes found. Please check database permissions.")
 
     print("\nSUCCESS: Database is now optimized for dynamic routing.")
+
 
 if __name__ == "__main__":
     apply_routing_indexes()

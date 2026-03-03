@@ -12,6 +12,7 @@ DB_NAME = "routing_db"
 
 DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
+
 def import_roads():
     """Downloads PJ road data and uploads it to a PostGIS database for routing."""
     engine = create_engine(DATABASE_URL)
@@ -27,6 +28,7 @@ def import_roads():
     place_name = "Petaling Jaya, Selangor, Malaysia"
     print(f"Fetching graph for {place_name}...")
     graph = ox.graph_from_place(place_name, network_type='drive')
+    graph = ox.graph_from_place(place_name, network_type="drive")
 
     # Process data
     nodes, edges = ox.graph_to_gdfs(graph)
@@ -37,6 +39,11 @@ def import_roads():
     # Prepare standard columns
     edges['id'] = range(1, len(edges) + 1)
     edges['cost'] = edges['length']
+    edges = gpd.GeoDataFrame(edges, geometry="geometry")
+
+    # Prepare standard columns
+    edges["id"] = range(1, len(edges) + 1)
+    edges["cost"] = edges["length"]
 
     # Clean up OSM list types
     for col in edges.columns:
@@ -46,13 +53,18 @@ def import_roads():
     # Upload to PostGIS
     print("Uploading edges to PostGIS...")
     edges.to_postgis('pj_roads', engine, if_exists='replace', index=False)
+    edges.to_postgis("pj_roads", engine, if_exists="replace", index=False)
 
     with engine.connect() as conn:
-        conn.execute(text("CREATE INDEX IF NOT EXISTS pj_roads_geom_idx ON pj_roads USING GIST (geometry);"))
+        conn.execute(
+            text(
+                "CREATE INDEX IF NOT EXISTS pj_roads_geom_idx ON pj_roads USING GIST (geometry);"
+            )
+        )
         conn.commit()
 
     print("SUCCESS: Roads imported into 'pj_roads' table.")
 
+
 if __name__ == "__main__":
     import_roads()
-

@@ -47,6 +47,11 @@ class Settings(BaseSettings):
     rate_limit_report_images_per_minute: int = 30
     supabase_url: str | None = None
     supabase_service_role_key: str | None = None
+    data_backend: Literal["mock", "sql"] = "mock"
+    data_database_url: str = "postgresql://postgres:root@localhost:5432/routing_db"
+    routing_backend: Literal["mock", "sql"] = "mock"
+    routing_database_url: str = "postgresql://postgres:root@localhost:5432/routing_db"
+    routing_algorithm: Literal["dijkstra", "astar"] = "dijkstra"
 
     model_config = SettingsConfigDict(
         env_file=".env",
