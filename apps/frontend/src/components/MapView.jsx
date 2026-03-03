@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { MAPTILER_KEY } from "../api/config";
@@ -14,44 +14,51 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 export default function MapView({ onHazardClick }) {
   const mapContainer = useRef(null);
   const mapRef = useRef(null);
+  const [selectedHazard, setSelectedHazard] = useState(null);
+
   useEffect(() => {
-  if (mapRef.current) return; // Prevent reinitialization
+    if (mapRef.current) return;
 
-  const map = new maplibregl.Map({
-    container: mapContainer.current,
-    style: `https://api.maptiler.com/maps/streets/style.json?key=${MAPTILER_KEY}`,
-    center: [101.6165, 3.1292],
-    zoom: 12,
-  });
+    const map = new maplibregl.Map({
+      container: mapContainer.current,
+      style: `https://api.maptiler.com/maps/streets/style.json?key=${MAPTILER_KEY}`,
+      center: [101.6165, 3.1292],
+      zoom: 12,
+    });
 
-  mapRef.current = map;
+    mapRef.current = map;
 
-  map.on("load", async () => {
-    try {
-      const routeRes = await fetch("/data/pj_routes.geojson");
-      const routeGeoJSON = await routeRes.json();
-      addRouteLayer(map, routeGeoJSON);
+    map.on("load", async () => {
+      try {
+        const routeRes = await fetch("/data/pj_routes.geojson");
+        const routeGeoJSON = await routeRes.json();
+        addRouteLayer(map, routeGeoJSON);
 
-      const readinessGeoJSON = await loadReadiness();
-      addReadinessLayer(map, readinessGeoJSON);
+        const readinessGeoJSON = await loadReadiness();
+        addReadinessLayer(map, readinessGeoJSON);
 
-      const hazardGeoJSON = await loadHazards();
-      addHazardLayer(map, hazardGeoJSON, onHazardClick);
+        const hazardGeoJSON = await loadHazards();
 
-      await addShelterLayer(map);
+        // ⭐ Wrap hazard click handler
+        addHazardLayer(map, hazardGeoJSON, (hazard) => {
+          setSelectedHazard(hazard);
+          onHazardClick?.(hazard);
+        });
 
-    } catch (err) {
-      console.error("Failed to initialize layers:", err);
-    }
-  });
+        await addShelterLayer(map);
 
-  return () => {
-    if (mapRef.current) {
-      mapRef.current.remove();
-      mapRef.current = null;
-    }
-  };
-}, []);
+      } catch (err) {
+        console.error("Failed to initialize layers:", err);
+      }
+    });
+
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+    };
+  }, []);
 
   return (
     <div className="relative w-full h-full">
@@ -59,7 +66,6 @@ export default function MapView({ onHazardClick }) {
       <div ref={mapContainer} className="w-full h-full" />
 
       <LegendPanel />
-
     </div>
   );
 }
@@ -165,11 +171,23 @@ function addHazardLayer(map, geojson, onHazardClick) {
     },
   });
 
-  // Click → update panel
   map.on("click", "hazards-layer", (e) => {
-    const props = e.features[0].properties;
-    onHazardClick(props);
-  });
+
+  if (!e.features?.length) return;
+
+  const feature = e.features[0];
+
+  const hazardData = {
+    report_id: feature.properties.report_id,
+    confidence: feature.properties.confidence,
+    label: feature.properties.label,
+    redacted_image_url: feature.properties.image,
+    observed_at: feature.properties.observed_at
+  };
+
+  onHazardClick?.(hazardData);
+
+});
 
   // Hover popup
   const hoverPopup = new maplibregl.Popup({
