@@ -1,15 +1,16 @@
 """Implements accessibility metrics, per-cell accessibility computation and store them in table."""
 
+from apps.api.src.app.core.config import get_settings
 from sqlalchemy import create_engine, text
 
-DATABASE_URL = "postgresql://postgres:root@localhost:5432/routing_db"
+settings = get_settings()
 
 class AccessibilityManager:
     """Manages the definition, computation, and storage of accessibility metrics."""
 
     def __init__(self):
         """Initializes the database connection."""
-        self.engine = create_engine(DATABASE_URL)
+        self.engine = create_engine(settings.routing_database_url)
 
     def setup_infrastructure(self):
         """Creates the accessibility table and a mock shelters table for testing."""
@@ -135,6 +136,7 @@ class AccessibilityManager:
             res = conn.execute(text(verify_sql)).fetchone()
             if res and res[0] is not None and res[0] > 0:
                 print("\n--- Accessibility Task Verification ---")
+                print(f"Target Environment: {settings.app_env.upper()}")
                 print(f"Total Cells Processed: {res[0]}")
                 print(f"Average Travel Time to Shelter: {round(float(res[1]), 2)} minutes")
                 print(f"Maximum Travel Time to Shelter: {round(float(res[2]), 2)} minutes")

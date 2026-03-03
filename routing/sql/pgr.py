@@ -1,10 +1,9 @@
 """Provides a pathfinding query to compute optimal paths using Dijkstra and A* algorithms via pgRouting."""
 
-
+from apps.api.src.app.core.config import get_settings
 from sqlalchemy import create_engine, text
 
-DATABASE_URL = "postgresql://postgres:root@localhost:5432/routing_db"
-
+settings = get_settings()
 
 def get_node_id(conn, lon, lat):
     """Finds the nearest road network node ID for a pair of coordinates."""
@@ -20,7 +19,12 @@ def get_node_id(conn, lon, lat):
 
 def run_route(start_coords, end_coords, algorithm="dijkstra"):
     """Executes a pathfinding query (Dijkstra or A*) and returns the travel time and geometry."""
-    engine = create_engine(DATABASE_URL)
+    # Header with Environment Prompt
+    print(f"--- {settings.app_name}: Pathfinding Query Engine ---")
+    print(f"Target Environment: {settings.app_env.upper()}")
+
+    # Create engine directly using centralized settings
+    engine = create_engine(settings.routing_database_url, pool_pre_ping=True)
 
     with engine.connect() as conn:
         # Snap coordinates to graph nodes
@@ -65,10 +69,6 @@ def run_route(start_coords, end_coords, algorithm="dijkstra"):
         query = astar_sql if algorithm.lower() == "astar" else dijkstra_sql
 
         # Execute Pathfinding
-        results = conn.execute(text(query), {"start": start_node, "end": end_node}).fetchall()
-
-
-        # Execute Pathfinding
         results = conn.execute(
             text(query), {"start": start_node, "end": end_node}
         ).fetchall()
@@ -78,7 +78,7 @@ def run_route(start_coords, end_coords, algorithm="dijkstra"):
             return None
 
         # Process Results
-        total_cost = sum(row[3] for row in results if row[3] > 0)
+        total_cost = sum(row[3] for row in results if row[3] is not None and row[3] > 0)
         path_geometry = [row[4] for row in results if row[4] is not None]
 
         print("Route Found!")
@@ -89,12 +89,8 @@ def run_route(start_coords, end_coords, algorithm="dijkstra"):
 
 if __name__ == "__main__":
     # Example coordinates in Petaling Jaya
-    START = (101.609, 3.155) # Mutiara Damansara
-    END = (101.645, 3.100)   # PJ State
-
     START = (101.609, 3.155)  # Mutiara Damansara
-    END = (101.645, 3.100)  # PJ State
-
+    END = (101.645, 3.100)    # PJ State
 
     # Run Dijkstra
     route_data = run_route(START, END, algorithm="dijkstra")

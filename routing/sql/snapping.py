@@ -2,10 +2,10 @@
 
 import random
 
+from apps.api.src.app.core.config import get_settings
 from sqlalchemy import create_engine, text
 
-DATABASE_URL = "postgresql://postgres:root@localhost:5432/routing_db"
-
+settings = get_settings()
 
 def get_nearest_node(engine, lon, lat, label="Point"):
     """Snaps coordinates to the closest road node ID."""
@@ -33,9 +33,13 @@ def get_nearest_node(engine, lon, lat, label="Point"):
 
 def verify_snapping_tasks():
     """Picks nodes, adds a random offset, and verifies snapping and routing."""
-    engine = create_engine(DATABASE_URL)
+    print(f"--- {settings.app_name}: Route Query Engine (Random Snapping Verification) ---")
+    print(f"Target Environment: {settings.app_env.upper()}")
 
-    print("--- Route Query Engine (Random Snapping Verification) ---")
+    db_host = settings.routing_database_url.split('@')[-1]
+    print(f"Connecting to: {db_host}\n")
+
+    engine = create_engine(settings.routing_database_url)
 
     # Fetch random coordinates from existing nodes
     random_coords_query = "SELECT ST_X(the_geom), ST_Y(the_geom) FROM pj_roads_vertices_pgr ORDER BY random() LIMIT 2;"

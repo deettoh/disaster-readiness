@@ -7,25 +7,21 @@ import logging
 import os
 from typing import Any
 
-from dotenv import load_dotenv
+from apps.api.src.app.core.config import get_settings
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import SQLAlchemyError
 
-# 1. Load Environment Variables
-load_dotenv()
+# 1. Load Settings from Centralized Configuration
+settings = get_settings()
 
 # Database Setup (Internal default engine)
-DB_USER = os.getenv("DB_USER", "postgres")
-DB_PASS = os.getenv("DB_PASS", "root")
-DB_HOST = os.getenv("DB_HOST", "localhost")
-DB_PORT = os.getenv("DB_PORT", "5432")
-DB_NAME = os.getenv("DB_NAME", "routing_db")
-
-DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+# Using centralized settings for the URL
+DATABASE_URL = settings.routing_database_url
 default_engine = create_engine(DATABASE_URL)
 
 # Bounding Box (Defaults to Petaling Jaya area)
+# Using os.getenv as a fallback since these are not yet in the Settings class
 PJ_BOUNDS = {
     "min_lat": float(os.getenv("PJ_MIN_LAT", 3.03)),
     "max_lat": float(os.getenv("PJ_MAX_LAT", 3.17)),

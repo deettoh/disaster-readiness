@@ -1,7 +1,9 @@
 """Define penalty mapping based on hazard type and penalty scaling based on confidence score."""
+from apps.api.src.app.core.config import get_settings
 from sqlalchemy import create_engine, text  # noqa: D100
 
-DATABASE_URL = "postgresql://postgres:root@localhost:5432/routing_db"
+# Initialize settings
+settings = get_settings()
 
 class HazardManager:
     """Manages hazard-to-penalty mapping and scaling logic."""
@@ -22,14 +24,15 @@ class HazardManager:
 
 def verify_hazard_logic():
     """Verifies hazard mapping and performs a temporary database test."""
-    engine = create_engine(DATABASE_URL)
+    engine = create_engine(settings.routing_database_url)
     manager = HazardManager()
 
-    print("--- C3 Task 1: Hazard Label Mapping ---")
+    print(f"Target Environment: {settings.app_env.upper()}")
+    print("--- Hazard Label Mapping ---")
     for label, val in manager.hazard_mapping.items():
         print(f"Hazard: {label.ljust(10)} | Base Penalty: {val}")
 
-    print("\n--- C3 Task 2: Confidence Scaling Rules ---")
+    print("\n--- Confidence Scaling Rules ---")
     test_cases = [("flood", 0.85), ("fire", 0.50), ("landslide", 0.90)]
     for label, conf in test_cases:
         p = manager.get_penalty(label, conf)
@@ -41,7 +44,7 @@ def verify_hazard_logic():
         # Start a transaction manually to allow rollback
         trans = conn.begin()
         try:
-            # 1. Fetch an existing edge
+            # Fetch an existing edge
             edge = conn.execute(text("SELECT id, risk_penalty FROM pj_roads LIMIT 1;")).fetchone()
 
             if not edge:
@@ -55,7 +58,7 @@ def verify_hazard_logic():
             print(f"Testing Temporary Update on Edge ID: {edge_id}")
             print(f"Original Penalty: {original_penalty}")
 
-            # 2. Perform the Update
+            # Perform the Update
             test_penalty = manager.get_penalty("flood", 0.85)
             update_sql = text("""
                 UPDATE pj_roads
@@ -65,7 +68,7 @@ def verify_hazard_logic():
             """)
             conn.execute(update_sql, {"penalty": test_penalty, "edge_id": edge_id})
 
-            # 3. Verify the change within the transaction
+            # Verify the change within the transaction
             verify_res = conn.execute(
                 text("SELECT risk_penalty FROM pj_roads WHERE id = :id"),
                 {"id": edge_id}
@@ -74,11 +77,11 @@ def verify_hazard_logic():
             if verify_res:
                 print(f"Verification (In-Transaction): New Penalty = {verify_res[0]}")
 
-            # 4. Rollback to undo changes
+            # Rollback to undo changes
             trans.rollback()
             print("Rollback performed.")
 
-            # 5. Final check to prove data is reverted
+            # Final check to prove data is reverted
             final_res = conn.execute(
                 text("SELECT risk_penalty FROM pj_roads WHERE id = :id"),
                 {"id": edge_id}

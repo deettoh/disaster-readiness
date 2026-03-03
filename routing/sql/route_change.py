@@ -1,18 +1,20 @@
 """Verifies that routing paths change or update their metrics after a hazard event."""
 
-from contract import get_route
-from radius import RadiusPenaltyManager
+from apps.api.src.app.core.config import get_settings
 from sqlalchemy import create_engine
-from updater import HazardUpdater
 
-DATABASE_URL = "postgresql://postgres:root@localhost:5432/routing_db"
+from routing.sql.contract import get_route
+from routing.sql.radius import RadiusPenaltyManager
+from routing.sql.updater import HazardUpdater
+
+settings = get_settings()
 
 class RouteHazardVerifier:
     """Handles the comparison of routes before and after hazard application."""
 
     def __init__(self):
         """Initializes database connection and managers."""
-        self.engine = create_engine(DATABASE_URL)
+        self.engine = create_engine(settings.routing_database_url)
 
         # Initialize Penalty Manager (this one usually takes the engine)
         self.rpm = RadiusPenaltyManager(self.engine)
@@ -30,6 +32,7 @@ class RouteHazardVerifier:
 
         # Get Baseline Route
         print("--- Calculating Baseline Route ---")
+        print(f"Target Environment: {settings.app_env.upper()}")
         baseline = get_route(
             start_coords[0], start_coords[1],
             end_coords[0], end_coords[1],

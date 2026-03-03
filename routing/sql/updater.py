@@ -1,17 +1,19 @@
 """Implements and verifies SQL-based risk penalty updates and cost recomputation."""
 
-from hazard import HazardManager
-from radius import RadiusPenaltyManager
+from apps.api.src.app.core.config import get_settings
 from sqlalchemy import create_engine, text
 
-DATABASE_URL = "postgresql://postgres:root@localhost:5432/routing_db"
+from routing.sql.hazard import HazardManager
+from routing.sql.radius import RadiusPenaltyManager
+
+settings = get_settings()
 
 class HazardUpdater:
     """Manages the application of risk penalties and cost recomputations."""
 
     def __init__(self):
         """Initializes the database engine and helper managers."""
-        self.engine = create_engine(DATABASE_URL)
+        self.engine = create_engine(settings.routing_database_url)
         self.hazard_manager = HazardManager()
         self.radius_manager = RadiusPenaltyManager(self.engine)
 
@@ -63,6 +65,7 @@ class HazardUpdater:
             avg_penalty = result[2] if result[2] is not None else 0.0
 
             print("\n--- Integrity Verification ---")
+            print(f"Target Environment: {settings.app_env.upper()}")
             print(f"Null Cost Segments: {null_costs}")
             print(f"Active Hazard Segments: {high_risk_count}")
 
@@ -77,18 +80,18 @@ def run_update_verification():
     """  # noqa: D205
     updater = HazardUpdater()
 
-    # 1. Reset state to ensure clean test
+    # Reset state to ensure clean test
     print("Initializing environment...")
     updater.radius_manager.reset_all_penalties()
 
-    # 2. Define a flood event (mapping: 1200 * 0.9 = 1080 seconds added to cost)
+    # Define a flood event (mapping: 1200 * 0.9 = 1080 seconds added to cost)
     # Location: PJ Section 14
     test_lat, test_lon = 3.110, 101.635
 
-    # 3. Execute Task 4 (Penalty Update) and Task 5 (Cost Recomputation)
-    updater.apply_hazard_event(test_lat, test_lon, 500, "landslide", 0.9)
+    # Execute Penalty Update and Cost Recomputation
+    updater.apply_hazard_event(test_lat, test_lon, 500, "flood", 0.9)
 
-    # 4. Final verification
+    # Final verification
     if updater.verify_update_integrity():
         print("\nVerified. SQL updates and cost recomputations are consistent.")
     else:

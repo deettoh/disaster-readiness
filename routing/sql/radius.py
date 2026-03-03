@@ -1,9 +1,11 @@
 """Implements radius-based spatial queries and verifies penalty application and resets."""
 
-from hazard import HazardManager
+from apps.api.src.app.core.config import get_settings
 from sqlalchemy import create_engine, text
 
-DATABASE_URL = "postgresql://postgres:root@localhost:5432/routing_db"
+from routing.sql.hazard import HazardManager
+
+settings = get_settings()
 
 class RadiusPenaltyManager:
     """Handles spatial updates and resets for road segments within a hazard radius."""
@@ -60,7 +62,7 @@ class RadiusPenaltyManager:
 
 def verify_radius_task():
     """Performs a test run of the radius-based penalty implementation."""
-    engine = create_engine(DATABASE_URL)
+    engine = create_engine(settings.routing_database_url)
     rpm = RadiusPenaltyManager(engine)
 
     # Test parameters: A point in Petaling Jaya (Section 14 area)
@@ -70,19 +72,20 @@ def verify_radius_task():
     conf = 0.9
 
     print("--- Affected Edges within Radius Query ---")
+    print(f"Target Environment: {settings.app_env.upper()}")
 
-    # 1. Reset state
+    # Reset state
     print("Resetting existing penalties...")
     rpm.reset_all_penalties()
 
-    # 2. Apply Hazard
+    # Apply Hazard
     print(f"Applying '{hazard}' (conf: {conf}) within {test_radius}m of ({test_lat}, {test_lon})...")
     affected_count = rpm.apply_hazard_to_area(test_lat, test_lon, test_radius, hazard, conf)
 
     if affected_count > 0:
         print(f"SUCCESS: {affected_count} road segments updated with new penalties.")
 
-        # 3. Verification Query
+        # Verification Query
         verify_sql = """
             SELECT id, risk_penalty, agg_cost
             FROM pj_roads
@@ -95,7 +98,7 @@ def verify_radius_task():
             for row in rows:
                 print(f" - Edge ID: {row[0]} | Penalty: {row[1]} | Total Cost: {row[2]:.2f}s")
 
-        # 4. Final Reset Verification
+        # Final Reset Verification
         print("\nVerifying Reset functionality...")
         rpm.reset_all_penalties()
         with engine.connect() as conn:
