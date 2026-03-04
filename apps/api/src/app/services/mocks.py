@@ -17,7 +17,7 @@ from app.schemas.routing import RouteRequest, RouteResponse
 
 
 class MockReportRepository:
-    """In-memory-style mock for report persistence operations."""
+    """In-memory style mock for report persistence operations."""
 
     async def create_report(self, payload: ReportCreateRequest) -> ReportCreateResponse:
         """Return a mock report creation response."""
@@ -241,7 +241,7 @@ class MockPostProcessingHooks:
         }
 
     async def trigger_road_penalty_update(self, report_id: UUID) -> None:
-        """Capture road-penalty trigger invocation."""
+        """Capture road penalty trigger invocation."""
         self.trigger_calls["road_penalty_update"].append(str(report_id))
 
     async def trigger_readiness_recompute(self, report_id: UUID) -> None:

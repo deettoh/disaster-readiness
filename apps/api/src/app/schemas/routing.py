@@ -1,4 +1,4 @@
-"""Routing schemas (skeleton)."""
+"""Routing schemas."""
 
 from pydantic import BaseModel, ConfigDict, Field
 

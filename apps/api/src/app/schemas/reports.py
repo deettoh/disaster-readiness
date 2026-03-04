@@ -1,4 +1,4 @@
-"""Report submission schemas (skeleton)."""
+"""Report submission schemas."""
 
 from datetime import datetime
 from typing import Literal

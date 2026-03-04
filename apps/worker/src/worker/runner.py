@@ -7,7 +7,7 @@ from rq import Queue, Worker
 
 
 def main() -> None:
-    """Start an RQ worker using environment-configured Redis/queue settings."""
+    """Start an RQ worker using environment configured Redis/queue settings."""
     redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
     queue_name = os.getenv("QUEUE_NAME", "image-processing")
 
