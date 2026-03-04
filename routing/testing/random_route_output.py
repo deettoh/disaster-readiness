@@ -3,11 +3,13 @@
 import json
 from pathlib import Path
 
+from apps.api.src.app.core.config import get_settings
 from sqlalchemy import create_engine, text
 
-DATABASE_URL = "postgresql://postgres:root@localhost:5432/routing_db"
-ARTIFACTS_DIR = Path(__file__).resolve().parents[1] / "artifacts"
+settings = get_settings()
 
+# Define Artifacts directory relative to this file
+ARTIFACTS_DIR = Path(__file__).resolve().parents[1] / "artifacts"
 
 def get_random_node_ids(conn):
     """Picks two random node IDs from the road network."""
@@ -18,14 +20,14 @@ def get_random_node_ids(conn):
             return result[0][0], result[1][0]
         return None, None
     except Exception as e:
-        print(f"Database error: {e}")
+        print(f"Database error picking nodes: {e}")
         return None, None
-
 
 def get_route_output_by_nodes(start_node, end_node):
     """Generates GeoJSON geometries and travel metrics for randomized routes."""
-    engine = create_engine(DATABASE_URL)
+    engine = create_engine(settings.routing_database_url)
 
+    # PostGIS query to aggregate segments into a single LineString GeoJSON
     route_query = """
         WITH path AS (
             SELECT * FROM pgr_dijkstra(
@@ -47,27 +49,32 @@ def get_route_output_by_nodes(start_node, end_node):
     """
 
     with engine.connect() as conn:
-        print(f"Attempting route from Node {start_node} to Node {end_node}")
+        print(f"Routing: Node {start_node} ➔ Node {end_node}")
         try:
             result = conn.execute(
                 text(route_query), {"start_node": start_node, "end_node": end_node}
             ).fetchone()
         except Exception as e:
-            print(f"Routing error: {e}")
+            print(f"Routing logic error: {e}")
             return None
 
         if not result or result[2] is None:
+            print("No valid path found between these nodes.")
             return None
 
-        total_dist_meters = result[0]
-        total_time_seconds = result[1]
+        total_dist_meters = result[0] or 0
+        total_time_seconds = result[1] or 0
         geojson_geometry = json.loads(result[2])
 
         return {
             "task_4_geojson": {
                 "type": "Feature",
                 "geometry": geojson_geometry,
-                "properties": {"source": start_node, "target": end_node},
+                "properties": {
+                    "source": start_node,
+                    "target": end_node,
+                    "env": settings.app_env
+                },
             },
             "task_5_metrics": {
                 "distance_km": round(total_dist_meters / 1000, 2),
@@ -75,31 +82,44 @@ def get_route_output_by_nodes(start_node, end_node):
             },
         }
 
-
 def verify_outputs(data):
     """Prints a summary of the generated route geometry and performance metrics."""
     if not data:
         return
 
     metrics = data["task_5_metrics"]
-    print("--- Route Verification ---")
+    print("\n--- Route Verification Report ---")
     print(f"GeoJSON Type: {data['task_4_geojson']['geometry']['type']}")
-    print(f"Distance: {metrics['distance_km']} km")
-    print(f"ETA: {metrics['eta_minutes']} minutes")
-    print("--------------------------")
-
+    print(f"Distance:     {metrics['distance_km']} km")
+    print(f"ETA:          {metrics['eta_minutes']} minutes")
+    print("-" * 33)
 
 if __name__ == "__main__":
-    engine = create_engine(DATABASE_URL)
+    # Header with Environment Prompt
+    print(f"--- {settings.app_name}: Randomized Route Export ---")
+    print(f"Target Environment: {settings.app_env.upper()}")
+
+    db_host = settings.routing_database_url.split('@')[-1]
+    print(f"Connecting to: {db_host}\n")
+
+    engine = create_engine(settings.routing_database_url)
+
     with engine.connect() as conn:
         node_a, node_b = get_random_node_ids(conn)
 
     if node_a and node_b:
         route_results = get_route_output_by_nodes(node_a, node_b)
+
         if route_results:
             verify_outputs(route_results)
+
+            # Save to Artifacts
             ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
             output_file = ARTIFACTS_DIR / "random_route_output.geojson"
-            with output_file.open("w") as f:
+
+            with output_file.open("w", encoding="utf-8") as f:
                 json.dump(route_results["task_4_geojson"], f, indent=2)
-            print(f"Success: Randomized route saved to GeoJSON at {output_file}.")
+
+            print(f"Success: GeoJSON saved to {output_file}")
+    else:
+        print("Could not retrieve random nodes. Check vertex table connectivity.")
