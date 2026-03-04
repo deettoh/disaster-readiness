@@ -1,14 +1,12 @@
 drop extension if exists "pg_net";
 
-create schema if not exists "Disaster Readiness";
+create schema if not exists "extensions";
 
-create schema if not exists "disaster_readiness";
+create extension if not exists "pgrouting" with schema "extensions";
 
-create extension if not exists "pgrouting" with schema "disaster_readiness";
+create extension if not exists "postgis" with schema "extensions";
 
-create extension if not exists "postgis" with schema "disaster_readiness";
-
-create type "disaster_readiness"."hazard_type" as enum ('flood', 'landslide', 'fallen_tree', 'road_block', 'infrastructure_failure', 'other');
+create type "extensions"."hazard_type" as enum ('flood', 'landslide', 'fallen_tree', 'road_block', 'infrastructure_failure', 'other');
 
 create sequence "public"."grid_cells_id_seq";
 
@@ -17,7 +15,7 @@ create sequence "public"."roads_edges_id_seq";
 create sequence "public"."shelters_id_seq";
 
 
-  create table "disaster_readiness"."neighborhoods" (
+  create table "public"."neighborhoods" (
     "id" uuid not null default gen_random_uuid(),
     "name" text not null default ''::text,
     "code" text,
@@ -25,7 +23,7 @@ create sequence "public"."shelters_id_seq";
       );
 
 
-alter table "disaster_readiness"."neighborhoods" enable row level security;
+alter table "public"."neighborhoods" enable row level security;
 
 
   create table "public"."alerts" (
@@ -55,7 +53,7 @@ alter table "public"."cell_accessibility" enable row level security;
   create table "public"."grid_cells" (
     "id" integer not null default nextval('public.grid_cells_id_seq'::regclass),
     "cell_id" text,
-    "geom" disaster_readiness.geometry(Polygon,4326),
+    "geom" extensions.geometry(Polygon,4326),
     "neighborhood" text,
     "baseline_vulnerability" numeric(4,3),
     "created_at" timestamp with time zone default now()
@@ -67,7 +65,7 @@ alter table "public"."grid_cells" enable row level security;
 
   create table "public"."hazard_predictions" (
     "id" uuid not null default gen_random_uuid(),
-    "geom" disaster_readiness.geography(Point,4326),
+    "geom" extensions.geography(Point,4326),
     "prediction_type" text,
     "probability" numeric(4,3),
     "model_version" text,
@@ -106,7 +104,7 @@ alter table "public"."readiness_scores" enable row level security;
 
   create table "public"."reports" (
     "id" uuid not null default gen_random_uuid(),
-    "geom" disaster_readiness.geography(Point,4326),
+    "geom" extensions.geography(Point,4326),
     "hazard_type" text,
     "confidence" numeric(4,2),
     "source" text,
@@ -124,7 +122,7 @@ alter table "public"."reports" enable row level security;
     "target" integer,
     "cost" double precision,
     "reverse_cost" double precision,
-    "geom" disaster_readiness.geometry(LineString,4326)
+    "geom" extensions.geometry(LineString,4326)
       );
 
 
@@ -135,7 +133,7 @@ alter table "public"."roads_edges" enable row level security;
     "id" integer not null default nextval('public.shelters_id_seq'::regclass),
     "name" text,
     "capacity" integer,
-    "geom" disaster_readiness.geography(Point,4326),
+    "geom" extensions.geography(Point,4326),
     "address" text,
     "created_at" timestamp with time zone default now()
       );
@@ -250,10 +248,6 @@ alter table "public"."weather_snapshots" add constraint "weather_snapshots_cell_
 alter table "public"."weather_snapshots" validate constraint "weather_snapshots_cell_id_fkey";
 
 set check_function_bodies = off;
-
-create type "disaster_readiness"."geometry_dump" as ("path" integer[], "geom" disaster_readiness.geometry);
-
-create type "disaster_readiness"."valid_detail" as ("valid" boolean, "reason" character varying, "location" disaster_readiness.geometry);
 
 CREATE OR REPLACE FUNCTION public.rls_auto_enable()
  RETURNS event_trigger
