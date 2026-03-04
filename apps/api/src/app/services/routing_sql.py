@@ -5,6 +5,8 @@ from __future__ import annotations
 from asyncio import to_thread
 from typing import Any
 
+from routing.sql.contract import get_route
+from routing.sql.engine import create_routing_engine
 from sqlalchemy.engine import Engine
 
 from app.core.exceptions import (
@@ -14,8 +16,6 @@ from app.core.exceptions import (
     ProcessingError,
 )
 from app.schemas.routing import RouteRequest, RouteResponse
-from routing.sql.contract import get_route
-from routing.sql.engine import create_routing_engine
 
 
 class SQLRoutingService:

@@ -1,6 +1,5 @@
 # Hyperlocal Disaster Readiness (Malaysia) - Routing
 
-
 ## SQL Routing Backend Setup (for API `ROUTING_BACKEND=sql`)
 
 Run these steps from repository root.
@@ -75,8 +74,8 @@ Note:
 
 | Module | What it is for |
 | --- | --- |
-| `routing/data/osm.py` | Downloads and exports road network data for Petaling Jaya using OSMnx. |
-| `routing/data/postgres.py` | Imports Petaling Jaya road networks into PostGIS/pgRouting. |
+| `routing/data/osm_extract.py` | Downloads and exports road network data for Petaling Jaya using OSMnx. |
+| `routing/data/load_postgres.py` | Imports Petaling Jaya road networks into PostGIS/pgRouting. |
 | `routing/data/topology.py` | Builds `source`/`target` topology and the routing vertex table. |
 | `routing/data/cost.py` | Computes base costs, initializes risk penalties, and aggregates route costs. |
 | `routing/data/index.py` | Applies routing-critical indexes to roads and vertices tables. |
@@ -86,6 +85,12 @@ Note:
 | `routing/sql/snapping.py` | Implements start/end geometric snapping helpers. |
 | `routing/sql/pgr.py` | Provides pathfinding with Dijkstra and A* using pgRouting. |
 | `routing/sql/contract.py` | Standardized route contract for backend integration. |
+| `routing/sql/engine.py` | Database engine helper for routing SQL modules. |
+| `routing/sql/hazard.py` | Define penalty mapping based on hazard type and penalty scaling based on confidence score. |
+| `routing/sql/radius.py` | Implements radius-based spatial queries and verifies penalty application and resets. |
+| `routing/sql/updater.py` | Implements and verifies SQL-based risk penalty updates and cost recomputation. |
+| `routing/sql/route_change.py` | Verifies that routing paths change or update their metrics after a hazard event. |
+| `routing/sql/accessibility.py` | Implements accessibility metrics, per-cell accessibility computation and store them in table. |
 | `routing/testing/edge_cases.py` | Validates route behavior for out-of-bounds/same-node/disconnected cases. |
 | `routing/testing/random_route_output.py` | Generates randomized route GeoJSON output into `routing/artifacts`. |
 | `routing/testing/scenario_generator.py` | Generates routing test scenario fixtures into `routing/testing/fixtures`. |
