@@ -1,10 +1,12 @@
 """Background job implementations for the worker service."""
 
+from __future__ import annotations
 
 import base64
 import json
 import logging
 import os
+import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -28,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class ClassificationResult:
-    """Hazard-classification output used by worker integration."""
+    """Hazard classification output used by worker integration."""
 
     hazard_label: str
     confidence: float
@@ -72,10 +74,21 @@ def process_report_image(
             classification=classification,
             database_url=database_url,
         )
+        _notify_processing_result(
+            report_id=report_uuid,
+            status="complete",
+            error_message=None,
+            api_base_url=api_base_url,
+        )
     except Exception as exc:  # noqa: BLE001
         logger.exception(
             "worker image processing failed",
             extra={"report_id": report_id, "error": str(exc)},
+        )
+        _notify_processing_result_safely(
+            report_id=report_uuid,
+            error_message=str(exc),
+            api_base_url=api_base_url,
         )
         raise
 
@@ -109,19 +122,19 @@ def _classify_image(image_bytes: bytes) -> ClassificationResult:
 
 
 def _mock_redact(image_bytes: bytes) -> bytes:
-    """Return pass-through bytes as temporary mocked redaction output."""
+    """Return passthrough bytes as temporary mocked redaction output."""
     return image_bytes
 
 
 def _redacted_output_dir() -> Path:
-    """Return redacted output directory from env with repo-local default."""
+    """Return redacted output directory from env with local default."""
     return Path(
         os.getenv("WORKER_REDACTED_OUTPUT_DIR", "data/processed/redacted")
     ).resolve()
 
 
 def _safe_filename(filename: str) -> str:
-    """Normalize filename to a basename-only value."""
+    """Normalize filename to a basename only value."""
     return Path(filename).name or "report-image.jpg"
 
 
@@ -204,7 +217,7 @@ def _persist_worker_outputs(
                 {
                     "report_id": report_id,
                     "bucket_path": redacted_path,
-                    "caption": "mock-redacted-pass-through",
+                    "caption": "mock-redacted-passthrough",
                 },
             )
     except SQLAlchemyError as exc:
@@ -213,6 +226,63 @@ def _persist_worker_outputs(
         engine.dispose()
 
 
+def _notify_processing_result(
+    *,
+    report_id: UUID,
+    status: str,
+    error_message: str | None,
+    api_base_url: str,
+) -> None:
+    """Notify API processing status callback with retry policy."""
     max_attempts = int(os.getenv("WORKER_CALLBACK_MAX_ATTEMPTS", "3"))
     timeout_seconds = float(os.getenv("WORKER_CALLBACK_TIMEOUT_SECONDS", "8"))
+    backoff_seconds = float(os.getenv("WORKER_CALLBACK_BACKOFF_SECONDS", "1.0"))
+    callback_url = (
+        f"{api_base_url.rstrip('/')}/reports/{report_id}/processing-result"
     )
+    body = {"status": status, "error": error_message}
+    data = json.dumps(body).encode("utf-8")
+
+    last_error: Exception | None = None
+    for attempt in range(1, max_attempts + 1):
+        req = request.Request(
+            callback_url,
+            data=data,
+            method="POST",
+            headers={"Content-Type": "application/json"},
+        )
+        try:
+            with request.urlopen(req, timeout=timeout_seconds) as response:  # noqa: S310
+                if response.status < 200 or response.status >= 300:
+                    raise RuntimeError(
+                        f"callback returned status {response.status}"
+                    )
+                return
+        except (error.URLError, TimeoutError, RuntimeError) as exc:
+            last_error = exc
+            if attempt < max_attempts:
+                time.sleep(backoff_seconds)
+
+    assert last_error is not None
+    raise RuntimeError("failed to notify processing result callback") from last_error
+
+
+def _notify_processing_result_safely(
+    *,
+    report_id: UUID,
+    error_message: str,
+    api_base_url: str,
+) -> None:
+    """Best effort failed status callback that never raises."""
+    try:
+        _notify_processing_result(
+            report_id=report_id,
+            status="failed",
+            error_message=error_message,
+            api_base_url=api_base_url,
+        )
+    except Exception:  # noqa: BLE001
+        logger.exception(
+            "failed to notify worker failure callback",
+            extra={"report_id": str(report_id)},
+        )
