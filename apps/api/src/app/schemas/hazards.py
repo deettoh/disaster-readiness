@@ -1,4 +1,4 @@
-"""Hazard read schemas (skeleton)."""
+"""Hazard read schemas."""
 
 from datetime import datetime
 from uuid import UUID

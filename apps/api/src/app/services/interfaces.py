@@ -14,7 +14,6 @@ from app.schemas.reports import (
 from app.schemas.routing import RouteRequest, RouteResponse
 
 
-# Need Member B
 class ReportRepository(Protocol):
     """Persistence interface for report metadata."""
 
@@ -23,12 +22,18 @@ class ReportRepository(Protocol):
         ...
 
 
-# Need member D
 class QueueClient(Protocol):
     """Queue interface for background jobs."""
 
-    async def enqueue_image_processing(self, report_id: str) -> str:
-        """Enqueue report image-processing and return a job identifier."""
+    async def enqueue_image_processing(
+        self,
+        report_id: str,
+        *,
+        image_payload_b64: str | None = None,
+        filename: str | None = None,
+        content_type: str | None = None,
+    ) -> str:
+        """Enqueue report image processing and return a job identifier."""
         ...
 
     async def ping(self) -> bool:
@@ -36,7 +41,6 @@ class QueueClient(Protocol):
         ...
 
 
-# Need member B and D
 class HazardQueryService(Protocol):
     """Read interface for hazard map/list data."""
 
@@ -45,7 +49,6 @@ class HazardQueryService(Protocol):
         ...
 
 
-# Need member B/C/D
 class ReadinessQueryService(Protocol):
     """Read interface for readiness score data."""
 
@@ -54,7 +57,6 @@ class ReadinessQueryService(Protocol):
         ...
 
 
-# Need member C
 class AlertQueryService(Protocol):
     """Read interface for alert data."""
 

@@ -31,7 +31,7 @@ class NotFoundError(AppError):
         resource_id: Any,
         details: dict[str, Any] | None = None,
     ) -> None:
-        """Initialize not-found metadata for the missing resource."""
+        """Initialize "not found" metadata for the missing resource."""
         super().__init__(
             message=f"{resource} with id '{resource_id}' not found",
             error_code="NOT_FOUND",
@@ -108,7 +108,7 @@ class RateLimitExceededError(AppError):
         retry_after_seconds: int,
         details: dict[str, Any] | None = None,
     ) -> None:
-        """Initialize a 429 rate-limit response payload."""
+        """Initialize a rate limit response payload."""
         super().__init__(
             message=message,
             error_code="RATE_LIMIT_EXCEEDED",
