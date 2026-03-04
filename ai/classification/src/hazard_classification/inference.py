@@ -16,7 +16,7 @@ DEVICE = torch.device(
     else "cpu"
 )
 BASE_DIR = Path(__file__).resolve().parents[2]
-MODEL_PATH = BASE_DIR / "models" / "best_model.pth"
+MODEL_PATH = BASE_DIR / "models" / "efficientnet_b0_best_model.pth"
 
 
 def predict_hazard(image_bytes: bytes) -> tuple[str, float]:
