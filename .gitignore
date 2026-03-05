@@ -27,7 +27,6 @@ htmlcov/
 # Routing Data
 routing/artifacts/
 cache/
-pj_mvp_data/
 *.shp
 *.shx
 *.dbf
