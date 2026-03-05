@@ -39,28 +39,40 @@ export function hazardsToGeoJSON(apiResponse) {
  */
 export function mergeReadinessIntoGeoJSON(
   geojson,
-  readinessItems,
-  geoKey = "name",      // property in GeoJSON
-  readinessKey = "area_name" // property in API
+  readinessItems
 ) {
-  const scoreMap = {};
+  if (!geojson?.features || !Array.isArray(readinessItems)) {
+    return geojson;
+  }
 
-  // Build lookup table
-  readinessItems.forEach((item) => {
-    scoreMap[item[readinessKey]] = item.score;
+  const readinessMap = new Map();
+
+  readinessItems.forEach(item => {
+    readinessMap.set(item.cell_id, item);
   });
 
-  // Inject score into each polygon
-  geojson.features.forEach((feature) => {
-    const areaIdentifier = feature.properties[geoKey];
+  geojson.features.forEach(feature => {
+
+    const polygonName =
+      feature.properties.name?.trim();
+
+    const readinessData =
+      readinessMap.get(polygonName);
 
     feature.properties.score =
-      scoreMap[areaIdentifier] ?? 0;
+      readinessData?.score ?? 0;
+
+    feature.properties.breakdown =
+      readinessData?.breakdown ?? {
+        baseline_vulnerability: 0,
+        recent_hazards: 0,
+        accessibility: 0,
+        coverage_confidence: 0
+      };
 
     feature.properties.updated_at =
-      scoreMap[areaIdentifier] !== undefined
-        ? new Date().toISOString()
-        : null;
+      readinessData?.updated_at ?? null;
+
   });
 
   return geojson;
