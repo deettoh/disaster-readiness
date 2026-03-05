@@ -11,11 +11,19 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 
 
-export default function MapView({ onHazardClick }) {
+export default function MapView({
+  onHazardClick,
+  onCellHover,
+  setReadinessGeoJSON,
+  zoomCell
+}) {
   const mapContainer = useRef(null);
   const mapRef = useRef(null);
-  const [selectedHazard, setSelectedHazard] = useState(null);
 
+  const [selectedHazard, setSelectedHazard] = useState(null);
+  const [readinessGeoJSON, setLocalReadiness] = useState(null);
+
+  // Map loading and layer initialization
   useEffect(() => {
     if (mapRef.current) return;
 
@@ -35,11 +43,14 @@ export default function MapView({ onHazardClick }) {
         addRouteLayer(map, routeGeoJSON);
 
         const readinessGeoJSON = await loadReadiness();
-        addReadinessLayer(map, readinessGeoJSON);
+
+        setLocalReadiness(readinessGeoJSON); 
+        setReadinessGeoJSON?.(readinessGeoJSON);
+
+        addReadinessLayer(map, readinessGeoJSON, onCellHover);
 
         const hazardGeoJSON = await loadHazards();
 
-        // ⭐ Wrap hazard click handler
         addHazardLayer(map, hazardGeoJSON, (hazard) => {
           setSelectedHazard(hazard);
           onHazardClick?.(hazard);
@@ -60,11 +71,39 @@ export default function MapView({ onHazardClick }) {
     };
   }, []);
 
+  // Zoom to cell when triggered by alert click
+  useEffect(() => {
+    if (!zoomCell?.cell || !mapRef.current || !readinessGeoJSON) return;
+
+    const feature = readinessGeoJSON.features.find(
+      f =>
+        f.properties.cell_id === zoomCell.cell ||
+        f.properties.name === zoomCell.cell
+    );
+
+    if (!feature || !feature.geometry) return;
+
+    try {
+      const coords = feature.geometry.coordinates[0];
+
+      const bounds = coords.reduce(
+        (b, coord) => b.extend(coord),
+        new maplibregl.LngLatBounds(coords[0], coords[0])
+      );
+
+      mapRef.current.fitBounds(bounds, {
+        padding: 60,
+        duration: 800
+      });
+
+    } catch (err) {
+      console.error("Zoom cell fitBounds failed:", err);
+    }
+  }, [zoomCell]);
+
   return (
     <div className="relative w-full h-full">
-
       <div ref={mapContainer} className="w-full h-full" />
-
       <LegendPanel />
     </div>
   );
@@ -101,9 +140,6 @@ async function loadHazards() {
 
     return hazardsToGeoJSON(mockData);
   }
-
-  console.log("Fetching hazards from API");
-
   const res = await fetch(`${API_BASE_URL}/hazards`);
   if (!res.ok) throw new Error("API error");
 
@@ -117,11 +153,12 @@ async function loadReadiness() {
   const geojson = await res.json();
 
   if (USE_MOCK) {
-    // Generate random readiness per polygon
+
     geojson.features.forEach((feature) => {
-      feature.properties.score = Number(
-        (Math.random() * 100).toFixed(1)
-      );
+
+      const score = Number((Math.random() * 100).toFixed(1));
+
+      feature.properties.score = score;
 
       feature.properties.breakdown = {
         baseline_vulnerability: Math.random(),
@@ -131,6 +168,7 @@ async function loadReadiness() {
       };
 
       feature.properties.updated_at = new Date().toISOString();
+
     });
 
     return geojson;
@@ -214,7 +252,7 @@ function addHazardLayer(map, geojson, onHazardClick) {
   });
 }
 
-function addReadinessLayer(map, geojson) {
+function addReadinessLayer(map, geojson, onCellHover) {
   map.addSource("readiness", {
     type: "geojson",
     data: geojson,
@@ -256,6 +294,21 @@ function addReadinessLayer(map, geojson) {
       "line-opacity": 0.1
     }
   });
+  map.on("mousemove", "readiness-layer", (e) => {
+
+  if (!e.features?.length) {
+    onCellHover?.(null);
+    return;
+  }
+
+  onCellHover?.(e.features[0]);
+
+});
+
+// Reset when mouse leaves polygon
+map.on("mouseleave", "readiness-layer", () => {
+  onCellHover?.(null);
+});
 }
 
 async function addShelterLayer(map) {

@@ -1,6 +1,11 @@
-import { useState } from "react"; 
+import { useEffect, useState } from "react";
 import MapView from "./components/MapView"; 
 import ReportModal from "./components/report/ReportModal"; 
+import HazardPanel from "./components/panels/HazardPanel";
+import ReadinessPanel from "./components/panels/ReadinessPanel";
+import AlertsPanel from "./components/panels/AlertsPanel";
+import RoutePanel from "./components/panels/RoutePanel";
+import { getMockAlerts } from "./mock/mockAlerts"; // remove when real API is ready
 /** 
  * Main entry point of the application. 
  * Overall layout: nav bar, full-screen map, and desktop side panel. 
@@ -10,6 +15,61 @@ export default function App() {
   const [reportOpen, setReportOpen] = useState(false);
   const [imagePopup, setImagePopup] = useState(null);
   const [showMobileInfo, setShowMobileInfo] = useState(true);
+  const [activePanel, setActivePanel] = useState("hazards");
+  const [hoveredCell, setHoveredCell] = useState(null);
+  const [readinessGeoJSON, setReadinessGeoJSON] = useState(null);
+  const [alerts, setAlerts] = useState([]);
+  const [popupAlert, setPopupAlert] = useState(null);
+  const [zoomTrigger, setZoomTrigger] = useState({
+    cell: null,
+    time: 0
+  });
+  const handleAlertClick = (alert) => {
+    if (!alert?.cell_id) return;
+    setSelectedAlertId(popupAlert.alert_id);
+    setActivePanel("alerts");
+    setZoomTrigger({
+      cell: alert.cell_id,
+      time: Date.now()
+    });
+  };
+  const [selectedAlertId, setSelectedAlertId] = useState(null);
+
+ useEffect(() => {
+    let interval;
+
+    async function pollAlerts() {
+      try {
+        const data = await getMockAlerts();
+        // fetch api here when ready, using mock for now
+        // const response = await fetch(`${API_BASE_URL}/alerts`);
+        // const data = await response.json();
+        if (!data?.items) return;
+
+        setAlerts(prev => {
+          const existingIds = new Set(prev.map(a => a.alert_id));
+
+          const newItems = data.items.filter(
+            a => !existingIds.has(a.alert_id)
+          );
+
+          if (newItems.length > 0) {
+            setPopupAlert(newItems[0]);
+          }
+
+          return [...newItems, ...prev];
+        });
+
+      } catch (err) {
+        console.error("Alert polling failed", err);
+      }
+    }
+
+    pollAlerts();
+    interval = setInterval(pollAlerts, 10000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="h-screen w-screen flex flex-col">
@@ -31,6 +91,11 @@ export default function App() {
               setSelectedHazard(hazard);
               setShowMobileInfo(true);
             }}
+            onCellHover={(cell) => {
+              setHoveredCell(cell);
+            }}
+            setReadinessGeoJSON={setReadinessGeoJSON}
+            zoomCell={zoomTrigger}
           />
           
           {/* Floating Report Button */}
@@ -70,98 +135,51 @@ export default function App() {
 
         {/* Desktop Side Panel */}
         <div className="hidden md:flex w-96 bg-white border-l flex-col">
-          <div className="p-4 font-semibold border-b">
-            Info Panel
+
+          {/* Tabs */}
+          <div className="flex border-b text-sm">
+            {["hazards", "readiness", "alerts", "route"].map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActivePanel(tab)}
+                className={`flex-1 p-3 capitalize transition
+                  ${activePanel === tab
+                    ? "border-b-2 border-red-600 font-semibold text-red-600"
+                    : "text-gray-500 hover:bg-gray-100"
+                  }`}
+              >
+                {tab}
+              </button>
+            ))}
           </div>
 
-          <div className="p-4 text-sm text-gray-600">
-            {selectedHazard ? (
-              <div className="space-y-2">
-
-                <p>
-                  <strong>Report ID:</strong>{" "}
-                  {selectedHazard.report_id || "N/A"}
-                </p>
-
-                <p>
-                  <strong>Type:</strong>{" "}
-                  {selectedHazard.label || "N/A"}
-                </p>
-
-                <p className="flex items-center gap-2">
-                  <strong>Confidence:</strong>
-
-                  {selectedHazard.confidence !== undefined ? (
-                    <>
-                      <span>
-                        {(Number(selectedHazard.confidence) * 100).toFixed(0)}%
-                      </span>
-
-                      {Number(selectedHazard.confidence) < 0.5 && (
-                        <div className="relative inline-flex group">
-                          <button
-                            type="button"
-                            aria-describedby="confidence-tooltip"
-                            className="px-2.5 py-1 text-xs rounded-full 
-                                      bg-amber-100 text-amber-700 border border-amber-300 
-                                      font-semibold hover:bg-amber-200 transition"
-                          >
-                            Uncertain
-                          </button>
-
-                          {/* Tooltip */}
-                          <div
-                            id="confidence-tooltip"
-                            role="tooltip"
-                            className="absolute left-1/2 -translate-x-1/2 bottom-full mb-3 w-64
-                                      opacity-0 translate-y-1
-                                      group-hover:opacity-100 group-hover:translate-y-0
-                                      transition-all duration-200 ease-out
-                                      pointer-events-none
-                                      bg-slate-800 text-slate-100 text-xs rounded-xl px-3 py-2
-                                      shadow-xl border border-slate-600 z-50"
-                          >
-                            Warning: Low confidence level detected. Please manually verify this hazard
-                            before taking any action.
-
-                            {/* Arrow */}
-                            <div className="absolute left-1/2 -translate-x-1/2 top-full
-                                            w-0 h-0
-                                            border-l-8 border-r-8 border-t-8
-                                            border-l-transparent border-r-transparent border-t-slate-800" />
-                          </div>
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    "N/A"
-                  )}
-                </p>
-
-                <p>
-                  <strong>Observed:</strong>{" "}
-                  {selectedHazard.observed_at
-                    ? new Date(selectedHazard.observed_at).toLocaleString()
-                    : "N/A"}
-                </p>
-
-                {selectedHazard.redacted_image_url && (
-                  <div className="space-y-1 pt-2">
-                    <p className="font-medium">Image</p>
-
-                    <img
-                      src={selectedHazard.redacted_image_url}
-                      className="w-56 rounded-xl shadow cursor-pointer hover:opacity-90 transition"
-                      onClick={() => setImagePopup(selectedHazard.redacted_image_url)}
-                    />
-                  </div>
-                )}
-
-              </div>
-            ) : (
-              <p>Click a hazard to see details.</p>
+          {/* Panel Content */}
+          <div className="p-4 overflow-y-auto flex-1">
+            {activePanel === "hazards" && (
+              <HazardPanel
+                selectedHazard={selectedHazard}
+                setImagePopup={setImagePopup}
+              />
             )}
+
+            {activePanel === "readiness" && (
+              <ReadinessPanel
+                hoveredCell={hoveredCell}
+                readinessGeoJSON={readinessGeoJSON}
+              />
+            )}
+
+            {activePanel === "alerts" && (
+              <AlertsPanel
+                alerts={alerts}
+                onAlertClick={handleAlertClick}
+                selectedAlertId={selectedAlertId}
+              />
+            )}
+
+            {activePanel === "route" && <RoutePanel />}
           </div>
+
         </div>
 
       </div>
@@ -179,6 +197,62 @@ export default function App() {
             src={imagePopup}
             className="max-w-[90vw] max-h-[90vh] rounded-xl"
           />
+        </div>
+      )}
+      {popupAlert && (
+        <div
+          className="fixed bottom-6 right-6 z-50 w-80 animate-slide-up cursor-pointer"
+          onClick={() => {
+            setSelectedAlertId(popupAlert.alert_id);
+            setActivePanel("alerts");
+            setZoomTrigger({
+              cell: popupAlert.cell_id,
+              time: Date.now()
+            });
+          }}
+        >
+          <div className="bg-red-100 border border-red-200 rounded-xl shadow-xl p-4 space-y-2">
+
+            {/* Header */}
+            <div className="flex justify-between items-center">
+
+              <div className="flex items-center gap-2">
+
+                <span className="font-bold text-sm text-red-700">
+                  ALERT
+                </span>
+
+                <span className={`
+                  text-xs px-2 py-0.5 rounded-full capitalize
+                  ${popupAlert.level === "high"
+                    ? "bg-red-200 text-red-800"
+                    : popupAlert.level === "medium"
+                    ? "bg-yellow-100 text-yellow-700"
+                    : "bg-green-100 text-green-700"}
+                `}>
+                  {popupAlert.level}
+                </span>
+
+              </div>
+
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setPopupAlert(null);
+                }}
+                className="text-red-500 hover:text-red-700 transition"
+              >
+                ✕
+              </button>
+
+            </div>
+
+            {/* Message */}
+            <p className="text-sm text-red-900 leading-snug">
+              {popupAlert.message}
+            </p>
+
+          </div>
         </div>
       )}
 
