@@ -17,7 +17,7 @@ from app.schemas.routing import RouteRequest, RouteResponse
 
 
 class MockReportRepository:
-    """In-memory-style mock for report persistence operations."""
+    """In-memory style mock for report persistence operations."""
 
     async def create_report(self, payload: ReportCreateRequest) -> ReportCreateResponse:
         """Return a mock report creation response."""
@@ -36,15 +36,29 @@ class MockQueueClient:
         """Initialize mock queue behavior and failure simulation settings."""
         self._fail_first_attempts = fail_first_attempts
         self._attempts = 0
+        self.last_enqueued_payload: dict[str, str | None] | None = None
 
     @property
     def attempts(self) -> int:
         """Return current enqueue attempt count."""
         return self._attempts
 
-    async def enqueue_image_processing(self, report_id: str) -> str:
+    async def enqueue_image_processing(
+        self,
+        report_id: str,
+        *,
+        image_payload_b64: str | None = None,
+        filename: str | None = None,
+        content_type: str | None = None,
+    ) -> str:
         """Return a deterministic mock job ID."""
         self._attempts += 1
+        self.last_enqueued_payload = {
+            "report_id": report_id,
+            "image_payload_b64": image_payload_b64,
+            "filename": filename,
+            "content_type": content_type,
+        }
         if self._attempts <= self._fail_first_attempts:
             raise ExternalServiceError(
                 service="mock-queue",
@@ -227,7 +241,7 @@ class MockPostProcessingHooks:
         }
 
     async def trigger_road_penalty_update(self, report_id: UUID) -> None:
-        """Capture road-penalty trigger invocation."""
+        """Capture road penalty trigger invocation."""
         self.trigger_calls["road_penalty_update"].append(str(report_id))
 
     async def trigger_readiness_recompute(self, report_id: UUID) -> None:

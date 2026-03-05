@@ -1,5 +1,75 @@
 # Hyperlocal Disaster Readiness (Malaysia)
 
+## Quick start
+
+### 1) Before running the app (all modes)
+
+1. Copy environment template:
+	 ```bash
+	 cp .env.example .env
+	 ```
+2. Install backend dependencies:
+	 ```bash
+	 poetry install
+	 ```
+3. Install frontend dependencies:
+	 ```bash
+	 cd apps/frontend && npm install
+	 ```
+
+4. Return to root directory:
+     ```bash
+    cd ../..
+     ```
+
+5. Generate routing source data (OSM roads):
+	 ```bash
+	 poetry run python -m routing.data.osm
+	 ```
+
+6. Generate shelter CSV used by frontend sync:
+	 ```bash
+	 poetry run python -m routing.data.shelter
+	 ```
+
+Note:
+- Frontend `npm run dev`/`npm run build` automatically syncs `routing/artifacts/pj_shelters.csv` into `apps/frontend/public/pj_shelters.csv`.
+- If `pj_shelters.csv` is missing, frontend startup still works but shelter CSV sync is skipped with a warning.
+- If you use `ROUTING_BACKEND=sql`, continue with routing DB import/setup steps in [routing SQL setup](routing/README.md#sql-routing-backend-setup-for-api-routing_backendsql).
+
+
+### 2) Run with Docker
+
+- Backend stack (`api`, `worker`, `redis`):
+	```bash
+	docker compose up --build
+	```
+- Full stack (adds `frontend`):
+	```bash
+	docker compose --profile frontend up --build
+	```
+
+See full container runbook in [DOCKER.md](DOCKER.md).
+
+### 3) Run without Docker
+
+- Start API:
+	```bash
+	poetry run uvicorn app.main:app --host 0.0.0.0 --port 8000 --app-dir apps/api/src
+	```
+- Start frontend (new terminal):
+	```bash
+	cd apps/frontend && npm run dev
+	```
+- Optional: start worker (new terminal):
+	```bash
+	poetry run python apps/worker/src/worker/runner.py
+	```
+
+Useful references:
+- [DOCKER.md](DOCKER.md)
+- [routing/README.md](routing/README.md)
+
 ## Directory map
 
 | Directory | What it is for | Who owns it |

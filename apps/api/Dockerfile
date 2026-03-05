@@ -16,6 +16,7 @@ COPY pyproject.toml poetry.lock ./
 RUN poetry install --only main --no-root
 
 COPY apps/api/src ./apps/api/src
+COPY routing ./routing
 
 EXPOSE 8000
 

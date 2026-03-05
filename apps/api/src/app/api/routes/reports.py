@@ -1,5 +1,6 @@
 """Report endpoints (stubbed)."""
 
+import base64
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -78,8 +79,13 @@ async def upload_report_image(
         upload_file=image,
         max_size_bytes=settings.upload_max_size_bytes,
     )
+    image.file.seek(0)
+    image_payload_b64 = base64.b64encode(image.file.read()).decode("ascii")
     processing_status = await orchestration_service.enqueue_report_image_processing(
-        report_id
+        report_id,
+        image_payload_b64=image_payload_b64,
+        filename=normalized_filename,
+        content_type=normalized_content_type,
     )
     return ReportImageUploadResponse(
         report_id=report_id,
