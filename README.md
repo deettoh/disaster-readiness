@@ -33,7 +33,7 @@
 	 ```
 
 Note:
-- Frontend `npm run dev`/`npm run build` automatically syncs `routing/artifacts/pj_shelters.csv` into `apps/frontend/public/pj_shelters.csv`.
+- Frontend `npm run predev`/`npm run prebuild` automatically syncs `routing/artifacts/pj_shelters.csv` into `apps/frontend/public/pj_shelters.csv`.
 - If `pj_shelters.csv` is missing, frontend startup still works but shelter CSV sync is skipped with a warning.
 - If you use `ROUTING_BACKEND=sql`, continue with routing DB import/setup steps in [routing SQL setup](routing/README.md#sql-routing-backend-setup-for-api-routing_backendsql).
 
