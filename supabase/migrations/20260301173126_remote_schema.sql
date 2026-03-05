@@ -6,6 +6,7 @@ create extension if not exists "pgrouting" with schema "extensions";
 
 create extension if not exists "postgis" with schema "extensions";
 
+drop type if exists "extensions"."hazard_type" cascade;
 create type "extensions"."hazard_type" as enum ('flood', 'landslide', 'fallen_tree', 'road_block', 'infrastructure_failure', 'other');
 
 create sequence "public"."grid_cells_id_seq";
