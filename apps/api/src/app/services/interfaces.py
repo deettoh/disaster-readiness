@@ -12,6 +12,7 @@ from app.schemas.reports import (
     ReportStatusResponse,
 )
 from app.schemas.routing import RouteRequest, RouteResponse
+from app.schemas.weather import WeatherSnapshotResponse
 
 
 class ReportRepository(Protocol):
@@ -102,6 +103,14 @@ class ReportStatusStore(Protocol):
 
     async def get_status(self, report_id: UUID) -> ReportStatusResponse:
         """Return the latest report processing status."""
+        ...
+
+
+class WeatherQueryService(Protocol):
+    """Read interface for weather/rainfall data."""
+
+    async def get_weather_snapshot(self) -> WeatherSnapshotResponse:
+        """Return current rainfall readings for PJ neighbourhoods."""
         ...
 
 
