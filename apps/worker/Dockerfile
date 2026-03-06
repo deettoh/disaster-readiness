@@ -11,7 +11,6 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     REDIS_URL=redis://redis:6379/0 \
     QUEUE_NAME=image-processing \
     WORKER_API_BASE_URL=http://api:8000/api/v1 \
-    WORKER_DATABASE_URL=postgresql://postgres:root@localhost:5432/routing_db \
     WORKER_REDACTED_OUTPUT_DIR=/app/data/processed/redacted
 
 WORKDIR /app
