@@ -62,7 +62,7 @@ class RadiusPenaltyManager:
 
 def verify_radius_task():
     """Performs a test run of the radius-based penalty implementation."""
-    engine = create_engine(settings.routing_database_url)
+    engine = create_engine(settings.database_url)
     rpm = RadiusPenaltyManager(engine)
 
     # Test parameters: A point in Petaling Jaya (Section 14 area)

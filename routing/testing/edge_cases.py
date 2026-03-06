@@ -22,7 +22,7 @@ def get_node_id(conn, lon, lat):
 
 def test_route_logic(start_coords, end_coords, label):
     """Verifies routing behavior for out-of-bounds, identical, or disconnected points."""
-    engine = create_engine(settings.routing_database_url)
+    engine = create_engine(settings.database_url)
 
     print(f"\n[Case: {label}]")
 
@@ -68,7 +68,7 @@ if __name__ == "__main__":
     print(f"--- {settings.app_name}: Edge Case Validation ---")
     print(f"Target Environment: {settings.app_env.upper()}")
 
-    db_host = settings.routing_database_url.split('@')[-1]
+    db_host = settings.database_url.split('@')[-1]
     print(f"Testing against: {db_host}")
     print("=" * 50)
 

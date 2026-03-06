@@ -20,11 +20,11 @@ def visualize_full_map():
     print(f"Target Environment: {settings.app_env.upper()}")
 
     # Safely extract host for logging (don't print password)
-    db_host = settings.routing_database_url.split('@')[-1]
+    db_host = settings.database_url.split('@')[-1]
     print(f"Connecting to: {db_host}")
 
     # Use the database URL from centralized settings
-    engine = create_engine(settings.routing_database_url)
+    engine = create_engine(settings.database_url)
 
     # Pull the data from PostGIS
     query = "SELECT geometry, highway FROM pj_roads"

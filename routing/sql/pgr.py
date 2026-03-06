@@ -24,7 +24,7 @@ def run_route(start_coords, end_coords, algorithm="dijkstra"):
     print(f"Target Environment: {settings.app_env.upper()}")
 
     # Create engine directly using centralized settings
-    engine = create_engine(settings.routing_database_url, pool_pre_ping=True)
+    engine = create_engine(settings.database_url, pool_pre_ping=True)
 
     with engine.connect() as conn:
         # Snap coordinates to graph nodes

@@ -13,7 +13,7 @@ class HazardUpdater:
 
     def __init__(self):
         """Initializes the database engine and helper managers."""
-        self.engine = create_engine(settings.routing_database_url)
+        self.engine = create_engine(settings.database_url)
         self.hazard_manager = HazardManager()
         self.radius_manager = RadiusPenaltyManager(self.engine)
 

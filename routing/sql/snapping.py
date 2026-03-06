@@ -36,10 +36,10 @@ def verify_snapping_tasks():
     print(f"--- {settings.app_name}: Route Query Engine (Random Snapping Verification) ---")
     print(f"Target Environment: {settings.app_env.upper()}")
 
-    db_host = settings.routing_database_url.split('@')[-1]
+    db_host = settings.database_url.split('@')[-1]
     print(f"Connecting to: {db_host}\n")
 
-    engine = create_engine(settings.routing_database_url)
+    engine = create_engine(settings.database_url)
 
     # Fetch random coordinates from existing nodes
     random_coords_query = "SELECT ST_X(the_geom), ST_Y(the_geom) FROM pj_roads_vertices_pgr ORDER BY random() LIMIT 2;"

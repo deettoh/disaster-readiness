@@ -24,7 +24,7 @@ class HazardManager:
 
 def verify_hazard_logic():
     """Verifies hazard mapping and performs a temporary database test."""
-    engine = create_engine(settings.routing_database_url)
+    engine = create_engine(settings.database_url)
     manager = HazardManager()
 
     print(f"Target Environment: {settings.app_env.upper()}")
