@@ -9,18 +9,65 @@ export default function ReportModal({ open, onClose }) {
 
   const [location, setLocation] = useState(null);
   const [detectingLocation, setDetectingLocation] = useState(false);
+  const [hazardType, setHazardType] = useState("fire");
+  const [hazardLabel, setHazardLabel] = useState("");
 
-  /**
-   * Detect location only in Stage 2
-   */
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState(null);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [processing, setProcessing] = useState(false);
+  const [reportId, setReportId] = useState(null);
+  const [resultPopup, setResultPopup] = useState(null); 
+
+
   useEffect(() => {
-    if (open && stage === 2) {
-      detectLocation();
-    }
-  }, [open, stage]);
 
-  if (!open) return null;
+    if (!processing || !reportId || !open) return;
 
+    const interval = setInterval(async () => {
+
+      try {
+
+        const res = await fetch(
+          `http://localhost:8000/reports/${reportId}/status`
+        );
+
+        if (!res.ok) return;
+
+        const data = await res.json();
+
+        if (data.status === "complete") {
+
+          clearInterval(interval);
+
+          setProcessing(false);
+          setResultPopup("success");
+
+          setTimeout(() => {
+            resetForm();
+            onClose();
+            setResultPopup(null);
+          }, 1500);
+        }
+
+        if (data.status === "failed") {
+
+          clearInterval(interval);
+
+          setProcessing(false);
+          setResultPopup("failed");
+        }
+
+      } catch (err) {
+        console.error(err);
+      }
+
+    }, 2000);
+
+    return () => clearInterval(interval);
+
+  }, [processing, reportId, open]);
+  
   /** Image selection handler
    * 
    * @param {*} e 
@@ -178,7 +225,44 @@ export default function ReportModal({ open, onClose }) {
             </p>
             </div>
         )}
+        {location && (
+        <div className="space-y-3 pt-3 border-t">
 
+          {/* Hazard Type Selector */}
+          <div>
+            <p className="text-sm font-medium mb-2">Select a hazard type </p>
+            <div className="flex gap-2">
+              {["fire", "flood", "landslide"].map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => setHazardType(type)}
+                  className={`px-3 py-1 rounded-full text-xs border transition
+                    ${
+                      hazardType === type
+                        ? "bg-red-600 text-white border-red-600"
+                        : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
+                    }`}
+                >
+                  {type.charAt(0).toUpperCase() + type.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+          {/* Optional Label */}
+          <div>
+            <label className="text-sm font-medium">
+              Additional Details (Optional)
+            </label>
+            <textarea
+              value={hazardLabel}
+              onChange={(e) => setHazardLabel(e.target.value)}
+              placeholder="Add extra description..."
+              className="w-full mt-1 border rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-600"
+            />
+          </div>
+        </div>
+      )}
         <div className="flex justify-end gap-2 pt-2">
 
             <button
@@ -188,15 +272,33 @@ export default function ReportModal({ open, onClose }) {
             Back
             </button>
 
+            {/* Success / Error Messages
+            {uploadError && (
+              <p className="text-sm text-red-600 text-center">
+                {uploadError}
+              </p>
+            )} */}
+
+            {uploadSuccess && (
+              <p className="text-sm text-green-600 text-center">
+                Report submitted successfully!
+              </p>
+            )}
+
             <button
-            disabled={!location}
-            className={`px-4 py-2 text-sm rounded-lg text-white ${
-                location
-                ? "bg-red-600 hover:bg-red-700"
-                : "bg-gray-400 cursor-not-allowed"
-            }`}
+              disabled={!location || uploading || processing}
+              onClick={handleSubmit}
+              className={`px-4 py-2 text-sm rounded-lg text-white ${
+                !location || uploading || processing
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-red-600 hover:bg-red-700"
+              }`}
             >
-            Continue
+              {uploading
+                ? "Uploading..."
+                : processing
+                ? "Processing..."
+                : "Submit Report"}
             </button>
 
         </div>
@@ -204,7 +306,73 @@ export default function ReportModal({ open, onClose }) {
         </div>
     );
 }
+/**
+ * Handle final submission of the hazard report
+ */
+async function handleSubmit() {
+  try {
+    setUploading(true);
+    setUploadError(null);
 
+    // ---- Step 1: Create report metadata ----
+    const createResponse = await fetch(
+      "http://localhost:8000/reports",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          location,
+          note: hazardLabel || "",
+          user_hazard_label: hazardType,
+        }),
+      }
+    );
+
+    if (!createResponse.ok)
+      throw new Error("Failed to create report");
+
+    const createData = await createResponse.json();
+    const newReportId = createData.report_id;
+
+    setReportId(newReportId);
+
+    // ---- Step 2: Upload Image ----
+    const formData = new FormData();
+    formData.append("image", imageFile);
+
+    const uploadResponse = await fetch(
+      `http://localhost:8000/reports/${newReportId}/image`,
+      {
+        method: "POST",
+        body: formData,
+      }
+    );
+
+    if (!uploadResponse.ok)
+      throw new Error("Image upload failed");
+
+    // ---- Step 3: Transition State ----
+    setUploading(false);
+    setProcessing(true);
+
+  } catch (err) {
+    setUploadError(err.message);
+    setUploading(false);
+  }
+}
+
+function resetForm() {
+  setStage(1);
+  setImageFile(null);
+  setImagePreview(null);
+  setLocation(null);
+  setHazardType("fire");
+  setHazardLabel("");
+  setUploadError(null);
+  setUploadSuccess(false);
+}
+    
+  if (!open) return null;
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
 
@@ -221,6 +389,26 @@ export default function ReportModal({ open, onClose }) {
             {stage === 1 && renderPhotoStage()}
             {stage === 2 && renderLocationStage()}
         </div>
+        {resultPopup && (
+          <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-60">
+
+            <div className="bg-white p-6 rounded-xl text-center space-y-4">
+
+              {resultPopup === "success" && (
+                <p className="text-green-600 font-semibold">
+                  Report submitted successfully 🎉
+                </p>
+              )}
+
+              {resultPopup === "failed" && (
+                <p className="text-red-600 font-semibold">
+                  Processing failed. Please try again.
+                </p>
+              )}
+
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "sync:shelters": "if [ -f ../../routing/artifacts/pj_shelters.csv ]; then cp ../../routing/artifacts/pj_shelters.csv ./public/pj_shelters.csv; else echo 'Warning: routing/artifacts/pj_shelters.csv not found, skipping shelter CSV sync.'; fi",
+    "sync:shelters": "node scripts/syncShelters.js",
     "predev": "npm run sync:shelters",
     "dev": "vite",
     "prebuild": "npm run sync:shelters",
@@ -22,6 +22,7 @@
     "@eslint/js": "^9.39.1",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-basic-ssl": "^2.1.4",
     "@vitejs/plugin-react": "^5.1.1",
     "autoprefixer": "^10.4.27",
     "eslint": "^9.39.1",
