@@ -1,4 +1,4 @@
-"""Readiness endpoints (stubbed)."""
+"""Readiness endpoints."""
 
 from fastapi import APIRouter, Depends
 

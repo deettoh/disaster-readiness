@@ -7,7 +7,7 @@ settings = get_settings()
 
 def apply_routing_indexes():
     """Creates indexes on road tables and verifies they are active."""
-    engine = create_engine(settings.routing_database_url)
+    engine = create_engine(settings.database_url)
 
     # Define Index Queries
     index_queries = {

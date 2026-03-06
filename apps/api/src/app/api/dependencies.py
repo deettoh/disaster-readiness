@@ -69,9 +69,7 @@ def get_report_repository() -> ReportRepository:
 
     global _sql_report_repository
     if _sql_report_repository is None:
-        _sql_report_repository = SQLReportRepository(
-            database_url=settings.data_database_url
-        )
+        _sql_report_repository = SQLReportRepository(database_url=settings.database_url)
     return _sql_report_repository
 
 
@@ -101,9 +99,7 @@ def get_hazard_service() -> HazardQueryService:
 
     global _sql_hazard_service
     if _sql_hazard_service is None:
-        _sql_hazard_service = SQLHazardRepository(
-            database_url=settings.data_database_url
-        )
+        _sql_hazard_service = SQLHazardRepository(database_url=settings.database_url)
     return _sql_hazard_service
 
 
@@ -115,9 +111,7 @@ def get_readiness_service() -> ReadinessQueryService:
 
     global _sql_readiness_service
     if _sql_readiness_service is None:
-        _sql_readiness_service = SQLReadinessRepository(
-            database_url=settings.data_database_url
-        )
+        _sql_readiness_service = SQLReadinessRepository(database_url=settings.database_url)
     return _sql_readiness_service
 
 
@@ -129,7 +123,7 @@ def get_alert_service() -> AlertQueryService:
 
     global _sql_alert_service
     if _sql_alert_service is None:
-        _sql_alert_service = SQLAlertRepository(database_url=settings.data_database_url)
+        _sql_alert_service = SQLAlertRepository(database_url=settings.database_url)
     return _sql_alert_service
 
 
@@ -142,7 +136,7 @@ def get_routing_service() -> RoutingService:
     global _sql_routing_service
     if _sql_routing_service is None:
         _sql_routing_service = SQLRoutingService(
-            database_url=settings.routing_database_url,
+            database_url=settings.database_url,
             algorithm=settings.routing_algorithm,
         )
     return _sql_routing_service

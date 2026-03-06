@@ -7,7 +7,7 @@ settings = get_settings()
 
 def compute_and_initialize_costs():
     """Calculates travel times, initializes risk penalties, and totals aggregate costs."""
-    engine = create_engine(settings.routing_database_url)
+    engine = create_engine(settings.database_url)
 
     # Schema setup
     setup_sql = """

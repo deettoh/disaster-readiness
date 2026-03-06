@@ -17,7 +17,7 @@ settings = get_settings()
 
 # Database Setup (Internal default engine)
 # Using centralized settings for the URL
-DATABASE_URL = settings.routing_database_url
+DATABASE_URL = settings.database_url
 default_engine = create_engine(DATABASE_URL)
 
 # Bounding Box (Defaults to Petaling Jaya area)

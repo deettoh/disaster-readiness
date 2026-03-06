@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib
+import os
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
@@ -16,6 +17,11 @@ API_SRC = ROOT_DIR / "apps" / "api" / "src"
 for path in (str(ROOT_DIR), str(API_SRC)):
     if path not in sys.path:
         sys.path.insert(0, path)
+
+os.environ.setdefault(
+    "DATABASE_URL",
+    "postgresql://postgres:root@localhost:5432/routing_db",
+)
 
 app_module = importlib.import_module("app.main")
 dependencies_module = importlib.import_module("app.api.dependencies")
