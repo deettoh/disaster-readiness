@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState , useRef} from "react";
 import MapView from "./components/MapView"; 
 import ReportModal from "./components/report/ReportModal"; 
 import HazardPanel from "./components/panels/HazardPanel";
@@ -40,6 +40,99 @@ export default function App() {
   const [routeGeoJSON, setRouteGeoJSON] = useState(null);
   const [routeSummary, setRouteSummary] = useState(null);
   const [selectedShelter, setSelectedShelter] = useState("");
+  const [mobilePanelOpen, setMobilePanelOpen] = useState(false);
+  const [mobilePanelExpanded, setMobilePanelExpanded] = useState(false);
+  const [panelHeight, setPanelHeight] = useState(45);
+
+  const panelHeightRef = useRef(panelHeight);
+  const dragStartYRef = useRef(null);
+  const lastMoveTimeRef = useRef(0);
+  const velocityRef = useRef(0);
+  const animationFrameRef = useRef(null);
+
+  const handleDragStart = (e) => {
+    dragStartYRef.current = e.touches[0].clientY;
+    lastMoveTimeRef.current = performance.now();
+
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+    }
+  };
+
+  const handleDragMove = (e) => {
+    if (dragStartYRef.current === null) return;
+
+    const now = performance.now();
+
+    const currentY = e.touches[0].clientY;
+
+    const deltaY = dragStartYRef.current - currentY;
+
+    const dt = Math.max(1, now - lastMoveTimeRef.current);
+
+    velocityRef.current = deltaY / dt;
+
+    const screenHeight = window.innerHeight;
+    const deltaPercent = (deltaY / screenHeight)*5;
+
+    let newHeight = panelHeightRef.current + deltaPercent;
+
+    newHeight = Math.max(25, Math.min(90, newHeight));
+
+    panelHeightRef.current = newHeight;
+    setPanelHeight(newHeight);
+
+    lastMoveTimeRef.current = now;
+  };
+
+  const handleDragEnd = () => {
+    dragStartYRef.current = null;
+
+    const velocity = velocityRef.current;
+
+    let targetHeight;
+
+    // Flick physics snapping
+    if (velocity > 1.5) {
+      targetHeight = 90; // flick up → expand
+    } else if (velocity < -1.5) {
+      targetHeight = 50; // flick down → collapse
+    } else {
+      // Normal snap behaviour
+      if (panelHeightRef.current > 70) targetHeight = 90;
+      else if (panelHeightRef.current > 45) targetHeight = 55;
+      else targetHeight = 30;
+    }
+
+    animatePanelSnap(targetHeight);
+  };
+
+  const animatePanelSnap = (target) => {
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+    }
+
+    const start = panelHeightRef.current;
+    const duration = 200;
+    const startTime = performance.now();
+
+    const animate = (time) => {
+      const progress = Math.min((time - startTime) / duration, 1);
+
+      const ease = 1 - Math.pow(1 - progress, 3);
+
+      const value = start + (target - start) * ease;
+
+      panelHeightRef.current = value;
+      setPanelHeight(value);
+
+      if (progress < 1) {
+        animationFrameRef.current = requestAnimationFrame(animate);
+      }
+    };
+
+    animationFrameRef.current = requestAnimationFrame(animate);
+  };
 
  useEffect(() => {
     let interval;
@@ -132,32 +225,120 @@ export default function App() {
           >
             Report Hazard
           </button>
-          {/* Mobile Bottom Info Panel */}
-          {selectedHazard && showMobileInfo && (
-          <div className="md:hidden absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-lg p-4 z-40 animate-slide-up">
-            
-            {/* Drag Indicator */}
-            <div className="w-12 h-1 bg-gray-300 rounded-full mx-auto mb-3"></div>
-
-            {/* Close Button */}
-            <div className="flex justify-between items-start">
-              <h3 className="font-semibold text-sm">Hazard Details</h3>
+         {/* Mobile Panel Tabs */}
+         <div className="md:hidden absolute bottom-0 left-0 right-0 bg-white border-t flex z-40">
+            {["hazards","readiness","alerts","route"].map(tab => (
               <button
-                onClick={() => setShowMobileInfo(false)}
-                className="text-gray-400 text-sm"
+                key={tab}
+                onClick={() => {
+                  setActivePanel(tab);
+                  setMobilePanelOpen(true);
+                  setMobilePanelExpanded(false);
+                }}
+                className="flex-1 p-3 text-xs capitalize text-gray-600"
               >
-                ✕
+                {tab}
               </button>
-            </div>
-
-            <div className="space-y-2 text-sm mt-2">
-              <p><strong>Type:</strong> {selectedHazard.label}</p>
-              <p><strong>Confidence:</strong> {selectedHazard.confidence}</p>
-              <p><strong>Observed:</strong> {selectedHazard.observed_at}</p>
-            </div>
+            ))}
 
           </div>
-        )}
+          {/* Mobile Bottom Sheet */}
+          {mobilePanelOpen && (
+            <div
+              className="md:hidden absolute left-0 right-0 bg-white shadow-xl z-50 transition-all"
+              style={{
+                height: `${panelHeight}vh`,
+                bottom: 0,
+                transition: dragStartYRef.current ? "none" : "height 0.18s cubic-bezier(.4,0,.2,1)"
+              }}
+            >
+
+              {/* Drag Handle */}
+              <div
+                style={{
+                  width: "60px",
+                  height: "12px",
+                  background: "#d1d5db",
+                  borderRadius: "999px",
+                  margin: "10px auto",
+                  touchAction: "none"
+                }}
+                onTouchStart={handleDragStart}
+                onTouchMove={handleDragMove}
+                onTouchEnd={handleDragEnd}
+              />
+
+              {/* Tabs */}
+              <div className="flex border-b text-xs">
+
+                {["hazards","readiness","alerts","route"].map(tab => (
+                  <button
+                    key={tab}
+                    onClick={() => setActivePanel(tab)}
+                    className={`flex-1 p-3 capitalize
+                      ${activePanel === tab
+                        ? "border-b-2 border-red-600 text-red-600 font-semibold"
+                        : "text-gray-500"}
+                    `}
+                  >
+                    {tab}
+                  </button>
+                ))}
+
+                <button
+                  onClick={() => setMobilePanelOpen(false)}
+                  className="px-3 text-gray-400"
+                >
+                  ✕
+                </button>
+
+              </div>
+
+              {/* Panel Content */}
+              <div className="p-4 overflow-y-auto h-full">
+
+                {activePanel === "hazards" && (
+                  <HazardPanel
+                    selectedHazard={selectedHazard}
+                    setImagePopup={setImagePopup}
+                  />
+                )}
+
+                {activePanel === "readiness" && (
+                  <ReadinessPanel
+                    hoveredCell={hoveredCell}
+                    readinessGeoJSON={readinessGeoJSON}
+                  />
+                )}
+
+                {activePanel === "alerts" && (
+                  <AlertsPanel
+                    alerts={alerts}
+                    onAlertClick={handleAlertClick}
+                    selectedAlertId={selectedAlertId}
+                  />
+                )}
+
+                {activePanel === "route" && (
+                  <RoutePanel
+                    origin={origin}
+                    shelters={shelters}
+                    selectedShelter={selectedShelter}
+                    setSelectedShelter={setSelectedShelter}
+                    setOrigin={setOrigin}
+                    onDrawRoute={(geojson) => setRouteGeoJSON(geojson)}
+                    onClearRoute={() => {
+                      setRouteGeoJSON(null);
+                      setOrigin(null);
+                      setSelectedShelter("");
+                    }}
+                  />
+                )}
+
+              </div>
+
+            </div>
+          )}
         </div>
 
         {/* Desktop Side Panel */}
