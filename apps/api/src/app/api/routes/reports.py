@@ -1,4 +1,4 @@
-"""Report endpoints (stubbed)."""
+"""Report endpoints."""
 
 import base64
 from datetime import UTC, datetime

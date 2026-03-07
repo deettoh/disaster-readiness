@@ -7,6 +7,7 @@ from app.api.routes.hazards import router as hazards_router
 from app.api.routes.readiness import router as readiness_router
 from app.api.routes.reports import router as reports_router
 from app.api.routes.routing import router as routing_router
+from app.api.routes.weather import router as weather_router
 from app.schemas.common import ApiInfoResponse
 
 api_router = APIRouter(tags=["api"])
@@ -15,6 +16,7 @@ api_router.include_router(hazards_router)
 api_router.include_router(readiness_router)
 api_router.include_router(alerts_router)
 api_router.include_router(routing_router)
+api_router.include_router(weather_router)
 
 
 @api_router.get("/info", response_model=ApiInfoResponse)

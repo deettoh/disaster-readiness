@@ -54,9 +54,9 @@ def process_report_image(
     image_bytes = base64.b64decode(image_payload_b64.encode("ascii"))
     image_filename = (filename or "report-image.jpg").strip() or "report-image.jpg"
     output_dir = _redacted_output_dir()
-    database_url = os.getenv(
-        "WORKER_DATABASE_URL", "postgresql://postgres:root@localhost:5432/routing_db"
-    )
+    database_url = os.getenv("DATABASE_URL", "").strip()
+    if not database_url:
+        raise RuntimeError("DATABASE_URL must be set for worker persistence")
     api_base_url = os.getenv("WORKER_API_BASE_URL", "http://localhost:8000/api/v1")
 
     try:

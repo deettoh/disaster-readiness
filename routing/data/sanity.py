@@ -10,10 +10,10 @@ def run_sanity_checks():
     print(f"--- {settings.app_name}: Connectivity & Integrity Analysis ---")
     print(f"Target Environment: {settings.app_env.upper()}")
 
-    db_host = settings.routing_database_url.split('@')[-1]
+    db_host = settings.database_url.split('@')[-1]
     print(f"Connecting to: {db_host}")
 
-    engine = create_engine(settings.routing_database_url)
+    engine = create_engine(settings.database_url)
 
     # [1/3] Check for dangling edges
     print("\n[1/3] Checking for topological integrity...")

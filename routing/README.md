@@ -10,11 +10,11 @@ Run these steps from repository root.
   ```bash
   poetry install
   ```
-2. Ensure PostgreSQL is running and reachable at:
+2. Ensure your database is reachable via `DATABASE_URL`:
   ```
-  postgresql://postgres:root@localhost:5432/routing_db
+  postgresql://postgres.<PROJECT_REF>:<DB_PASSWORD>@aws-1-ap-southeast-1.pooler.supabase.com:5432/postgres?sslmode=require
   ```
-  If your DB URL is different, update the `DATABASE_URL` values in the routing scripts or set your environment accordingly.
+  Routing SQL scripts read `DATABASE_URL` directly.
 
 ### Build routing database objects (run in order)
 
@@ -45,11 +45,31 @@ Set in `.env`:
 
 ```dotenv
 ROUTING_BACKEND=sql
-ROUTING_DATABASE_URL=postgresql://postgres:root@localhost:5432/routing_db
+DATABASE_URL=postgresql://postgres.<PROJECT_REF>:<DB_PASSWORD>@aws-1-ap-southeast-1.pooler.supabase.com:5432/postgres?sslmode=require
 ROUTING_ALGORITHM=dijkstra
 ```
 
 Then start the API (Docker or non-Docker) from the root project runbook in [`README.md`](../README.md#2-run-with-docker).
+
+### Integration checkpoint commands
+
+Run this to validate C2/C3 SQL routing integration against a live database:
+
+```bash
+poetry run python scripts/verify_routing_sql_integration.py --database-url "$DATABASE_URL"
+```
+
+Run this to populate `public.cell_accessibility` and export Member B handoff CSV:
+
+```bash
+poetry run python scripts/run_accessibility_compute.py --database-url "$DATABASE_URL"
+```
+
+CSV output:
+
+```text
+routing/artifacts/cell_accessibility_handoff.csv
+```
 
 Note:
 - OSM shapefiles are generated locally under `routing/data/pj_mvp_data` and are not meant to be committed.
@@ -59,12 +79,27 @@ Note:
   ```
 - Frontend `npm run dev`/`npm run build` auto-syncs this file into `apps/frontend/public/pj_shelters.csv`.
 
+## Supabase schema compatibility layer
+
+Canonical routing storage is `public.roads_edges`.
+
+To avoid routing service logic churn, Supabase migration
+`20260305143000_add_routing_compatibility_views.sql` exposes compatibility
+objects expected by the current routing contract:
+- `public.pj_roads` (compatibility view)
+- `public.pj_roads_vertices_pgr` (compatibility materialized view)
+
+After structural road updates, refresh vertices with:
+```sql
+SELECT public.refresh_pj_roads_vertices_pgr();
+```
+
 ## Folder Structure (Current)
 
 | Path | Purpose |
 | --- | --- |
 | `routing/data` | Data acquisition and graph preparation scripts for Petaling Jaya routing. |
-| `routing/sql` | Core pgRouting query logic and backend contract module. |
+| `routing/sql` | Core pgRouting query logic and backend contract module (currently reads compatibility objects backed by `public.roads_edges`). |
 | `routing/testing` | Routing QA/demo scripts (edge-case checks, scenario generation, sample output). |
 | `routing/testing/fixtures` | Routing test fixture data (`pj_test_scenarios.json`). |
 | `routing/artifacts` | Generated routing artifacts (`pj_shelters.csv`, map PNG, route GeoJSON). |
@@ -90,7 +125,7 @@ Note:
 | `routing/sql/radius.py` | Implements radius-based spatial queries and verifies penalty application and resets. |
 | `routing/sql/updater.py` | Implements and verifies SQL-based risk penalty updates and cost recomputation. |
 | `routing/sql/route_change.py` | Verifies that routing paths change or update their metrics after a hazard event. |
-| `routing/sql/accessibility.py` | Implements accessibility metrics, per-cell accessibility computation and store them in table. |
+| `routing/sql/accessibility.py` | Computes canonical `public.cell_accessibility` metrics and exports CSV handoff for readiness integration. |
 | `routing/testing/edge_cases.py` | Validates route behavior for out-of-bounds/same-node/disconnected cases. |
 | `routing/testing/random_route_output.py` | Generates randomized route GeoJSON output into `routing/artifacts`. |
 | `routing/testing/scenario_generator.py` | Generates routing test scenario fixtures into `routing/testing/fixtures`. |

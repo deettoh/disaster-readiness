@@ -27,6 +27,7 @@ services:
       QUEUE_BACKEND: rq
       REDIS_URL: redis://redis:6379/0
       QUEUE_NAME: image-processing
+      DATABASE_URL: ${DATABASE_URL}
     ports:
       - "8000:8000"
     depends_on:
@@ -43,7 +44,7 @@ services:
       REDIS_URL: redis://redis:6379/0
       QUEUE_NAME: image-processing
       WORKER_API_BASE_URL: http://api:8000/api/v1
-      WORKER_DATABASE_URL: ${WORKER_DATABASE_URL:-postgresql://postgres:root@localhost:5432/routing_db}
+      DATABASE_URL: ${DATABASE_URL}
       WORKER_REDACTED_OUTPUT_DIR: /app/data/processed/redacted
     depends_on:
       redis:

@@ -1,4 +1,4 @@
-"""Routing endpoints (stubbed)."""
+"""Routing endpoints."""
 
 from fastapi import APIRouter, Depends, Query
 

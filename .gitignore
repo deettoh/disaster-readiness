@@ -32,3 +32,20 @@ cache/
 *.dbf
 *.prj
 *.cpg
+
+# datasets
+ai/redaction/plate-dataset/
+
+# logs
+ai/redaction/notebook/runs/
+ai/redaction/notebook/wandb/
+wandb/
+
+# Jupyter Notebook checkpoints
+notebook/.ipynb_checkpoints/
+
+# models
+*.pt
+
+# output 
+ai/redaction/outputs/
