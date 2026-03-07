@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import PinDropMapSelector from "./map/PinDropMapSelector";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 export default function ReportModal({ open, onClose }) {
 
   const [stage, setStage] = useState(1);
@@ -29,7 +31,7 @@ export default function ReportModal({ open, onClose }) {
       try {
 
         const res = await fetch(
-          `http://localhost:8000/reports/${reportId}/status`
+          `${API_BASE_URL}/reports/${reportId}/status`
         );
 
         if (!res.ok) return;
