@@ -18,25 +18,25 @@ Run these steps from repository root.
 
 ### Build routing database objects (run in order)
 
-1. Import roads and enable PostGIS/pgRouting:
+1. **Reset Database**: Initialise schema and seed static shelter reference data.
   ```bash
-  poetry run python -m routing.data.postgres
+  supabase db reset
   ```
-2. Build topology and vertices table:
+2. **Import Road Network**: Load Petaling Jaya road edges (OSM) into `public.roads_edges`. This uses a pre-processed pg_dump and syncs it with the canonical schema.
   ```bash
-  poetry run python -m routing.data.topology
+  poetry run python scripts/import_road_edges.py
   ```
-3. Compute costs and directional aggregated costs:
+3. **Generate Grid**: Generate a 500m x 500m analysis grid clipped to the PJ boundary and upload to `public.grid_cells`.
   ```bash
-  poetry run python -m routing.data.cost
+  poetry run python scripts/generate_grid.py
   ```
-4. Apply routing indexes:
+4. **Compute Accessibility Metrics**: Calculate travel times to shelters and road densities for each grid cell.
   ```bash
-  poetry run python -m routing.data.index
+  poetry run python scripts/run_accessibility_compute.py
   ```
-5. Optional sanity validation:
+5. **Verify (Optional)**: Run the end-to-end integration validator.
   ```bash
-  poetry run python -m routing.data.sanity
+  poetry run python scripts/verify_routing_sql_integration.py
   ```
 
 ### Enable SQL backend in API
@@ -51,31 +51,12 @@ ROUTING_ALGORITHM=dijkstra
 
 Then start the API (Docker or non-Docker) from the root project runbook in [`README.md`](../README.md#2-run-with-docker).
 
-### Integration checkpoint commands
-
-Run this to validate C2/C3 SQL routing integration against a live database:
-
-```bash
-poetry run python scripts/verify_routing_sql_integration.py --database-url "$DATABASE_URL"
-```
-
-Run this to populate `public.cell_accessibility` and export Member B handoff CSV:
-
-```bash
-poetry run python scripts/run_accessibility_compute.py --database-url "$DATABASE_URL"
-```
-
-CSV output:
-
-```text
-routing/artifacts/cell_accessibility_handoff.csv
-```
 
 Note:
 - OSM shapefiles are generated locally under `routing/data/pj_mvp_data` and are not meant to be committed.
 - If frontend needs shelter points, generate `routing/artifacts/pj_shelters.csv` with:
   ```bash
-  poetry run python -m routing.data.shelter
+  poetry run python -m routing.data.src.shelter
   ```
 - Frontend `npm run dev`/`npm run build` auto-syncs this file into `apps/frontend/public/pj_shelters.csv`.
 
@@ -109,14 +90,14 @@ SELECT public.refresh_pj_roads_vertices_pgr();
 
 | Module | What it is for |
 | --- | --- |
-| `routing/data/osm_extract.py` | Downloads and exports road network data for Petaling Jaya using OSMnx. |
-| `routing/data/load_postgres.py` | Imports Petaling Jaya road networks into PostGIS/pgRouting. |
-| `routing/data/topology.py` | Builds `source`/`target` topology and the routing vertex table. |
-| `routing/data/cost.py` | Computes base costs, initializes risk penalties, and aggregates route costs. |
-| `routing/data/index.py` | Applies routing-critical indexes to roads and vertices tables. |
-| `routing/data/sanity.py` | Runs graph integrity/connectivity sanity checks. |
-| `routing/data/map.py` | Generates full road-network visualization PNG into `routing/artifacts`. |
-| `routing/data/shelter.py` | Extracts and saves shelter candidates into `routing/artifacts/pj_shelters.csv`. |
+| `routing/data/src/osm_extract.py` | Downloads and exports road network data for Petaling Jaya using OSMnx. |
+| `routing/data/src/load_postgres.py` | Imports Petaling Jaya road networks into PostGIS/pgRouting. |
+| `routing/data/src/topology.py` | Builds `source`/`target` topology and the routing vertex table. |
+| `routing/data/src/cost.py` | Computes base costs, initializes risk penalties, and aggregates route costs. |
+| `routing/data/src/index.py` | Applies routing-critical indexes to roads and vertices tables. |
+| `routing/data/src/sanity.py` | Runs graph integrity/connectivity sanity checks. |
+| `routing/data/src/map.py` | Generates full road-network visualization PNG into `routing/artifacts`. |
+| `routing/data/src/shelter.py` | Extracts and saves shelter candidates into `routing/artifacts/pj_shelters.csv`. |
 | `routing/sql/snapping.py` | Implements start/end geometric snapping helpers. |
 | `routing/sql/pgr.py` | Provides pathfinding with Dijkstra and A* using pgRouting. |
 | `routing/sql/contract.py` | Standardized route contract for backend integration. |

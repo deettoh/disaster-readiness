@@ -22,20 +22,27 @@
     cd ../..
      ```
 
-5. Generate routing source data (OSM roads):
+5. **Seed the Database (SQL Backend)**:
+   If you are running with `ROUTING_BACKEND=sql` (default for advanced features), run these in order from the root:
 	 ```bash
-	 poetry run python -m routing.data.osm
+	 # 1. Reset DB (applies migrations + static seeds like shelters)
+	 supabase db reset
+
+	 # 2. Import road network (Petaling Jaya)
+	 poetry run python scripts/import_road_edges.py
+
+	 # 3. Generate analysis grid (500m cells)
+	 poetry run python scripts/generate_grid.py
+
+	 # 4. Compute accessibility metrics
+	 poetry run python scripts/run_accessibility_compute.py
 	 ```
 
-6. Generate shelter CSV used by frontend sync:
-	 ```bash
-	 poetry run python -m routing.data.shelter
-	 ```
-
-Note:
-- Frontend `npm run predev`/`npm run prebuild` automatically syncs `routing/artifacts/pj_shelters.csv` into `apps/frontend/public/pj_shelters.csv`.
-- If `pj_shelters.csv` is missing, frontend startup still works but shelter CSV sync is skipped with a warning.
-- If you use `ROUTING_BACKEND=sql`, continue with routing DB import/setup steps in [routing SQL setup](routing/README.md#sql-routing-backend-setup-for-api-routing_backendsql).
+### Note on Seeding:
+- `supabase db reset` handles core schema and static reference data (e.g., shelters).
+- The Python scripts in `scripts/` handle heavy spatial processing (geopandas/pgRouting) that requires external libraries.
+- Frontend `npm run dev` auto-syncs `routing/artifacts/pj_shelters.csv` to its public folder.
+- See [routing/README.md](routing/README.md) for detailed SQL routing setup.
 
 
 ### 2) Run with Docker
