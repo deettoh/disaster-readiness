@@ -1,31 +1,31 @@
-"""Face detection module using MediaPipe."""
+"""Face detection module using RetinaFace."""
 
-import cv2
-import mediapipe as mp
+from retinaface import RetinaFace
+
 
 class FaceDetector:
-    """Detects faces in an image using MediaPipe."""
-    def __init__(self):
-        """Initializes the face detection model."""
-        self.mp_face = mp.solutions.face_detection
-        self.detector = self.mp_face.FaceDetection(
-            model_selection=0, min_detection_confidence=0.5
-        )
+    """Detect faces in images using RetinaFace."""
+
+    def __init__(self, confidence_threshold: float = 0.6):
+        """Initialize the face detector with a confidence threshold."""
+        self.conf_threshold = confidence_threshold
 
     def detect_faces(self, image):
-            """Returns lists of bounding boxes [(x1, y1, x2, y2),...]"""
+        """Detect faces and return bounding boxes in pixel coordinates."""
+        detections = RetinaFace.detect_faces(image)
 
-            h, w, _ = image.shape
-            rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-            results = self.detector.process(rgb_image)
+        boxes = []
 
-            boxes = []
-            if results.detections:
-                for detection in results.detections:
-                    bbox = detection.location_data.relative_bounding_box
-                    x1 = int(bbox.xmin * w)
-                    y1 = int(bbox.ymin * h)
-                    x2 = int((bbox.xmin + bbox.width) * w)
-                    y2 = int((bbox.ymin + bbox.height) * h)
-                    boxes.append((x1, y1, x2, y2))
-            return boxes
+        if isinstance(detections, dict):
+            for _, face_data in detections.items():
+                score = face_data["score"]
+                if score < self.conf_threshold:
+                    continue
+
+                x1, y1, x2, y2 = face_data["facial_area"]
+                w = x2 - x1
+                h = y2 - y1
+
+                boxes.append((x1, y1, w, h))
+
+        return boxes
