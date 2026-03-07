@@ -1,6 +1,11 @@
 """Plate detection module using YOLOv8."""
 
+from pathlib import Path
+
 from ultralytics import YOLO
+
+BASE_DIR = Path(__file__).resolve().parent[2]
+MODEL_PATH = BASE_DIR / "models" / "best.pt"
 
 
 class PlateDetector:
@@ -8,10 +13,11 @@ class PlateDetector:
 
     def __init__(
         self,
-        model_path="/Users/amber/Desktop/hackathon/disaster-readiness/ai/redaction/models/best.pt",
+        model_path=None,
         conf=0.25,
     ):
         """Initialize the plate detector with the specified model and confidence threshold."""
+        model_path = model_path or MODEL_PATH
         self.model = YOLO(model_path)
         self.conf = conf
 
