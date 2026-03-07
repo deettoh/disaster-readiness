@@ -15,13 +15,20 @@ export default function MapView({
   onHazardClick,
   onCellHover,
   setReadinessGeoJSON,
-  zoomCell
+  zoomCell,
+  shelters,
+  origin,
+  setOrigin,
+  routeGeoJSON,
+  selectedShelter,
+  activePanel
 }) {
   const mapContainer = useRef(null);
   const mapRef = useRef(null);
 
   const [selectedHazard, setSelectedHazard] = useState(null);
   const [readinessGeoJSON, setLocalReadiness] = useState(null);
+  const activePanelRef = useRef(activePanel);
 
   // Map loading and layer initialization
   useEffect(() => {
@@ -38,9 +45,9 @@ export default function MapView({
 
     map.on("load", async () => {
       try {
-        const routeRes = await fetch("/data/pj_routes.geojson");
-        const routeGeoJSON = await routeRes.json();
-        addRouteLayer(map, routeGeoJSON);
+        const roadRes = await fetch("/data/pj_routes.geojson");
+        const roadGeoJSON = await roadRes.json();
+        addRoadLayer(map, roadGeoJSON);
 
         const readinessGeoJSON = await loadReadiness();
 
@@ -61,6 +68,12 @@ export default function MapView({
       } catch (err) {
         console.error("Failed to initialize layers:", err);
       }
+      map.on("click", (e) => {
+        if(activePanelRef.current !== "route") return;
+        const { lng, lat } = e.lngLat;
+        setOrigin([lng, lat]);
+
+      });
     });
 
     return () => {
@@ -100,6 +113,144 @@ export default function MapView({
       console.error("Zoom cell fitBounds failed:", err);
     }
   }, [zoomCell]);
+
+  const originMarkerRef = useRef(null);
+
+  useEffect(() => {
+    if (!mapRef.current) return;
+    if (!mapRef.current.isStyleLoaded()) return;
+
+    if (!origin) {
+      if (originMarkerRef.current) {
+        originMarkerRef.current.remove();
+        originMarkerRef.current = null;
+      }
+      return;
+    }
+
+    if (originMarkerRef.current) {
+      originMarkerRef.current.remove();
+    }
+
+    const el = document.createElement("div");
+    el.innerHTML = `
+    <svg width="30" height="30" viewBox="0 0 24 24" fill="red">
+      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
+    </svg>
+    `;
+
+    originMarkerRef.current = new maplibregl.Marker(el)
+      .setLngLat(origin)
+      .addTo(mapRef.current);
+
+  }, [origin]);
+  
+  useEffect(() => {
+
+    if (!mapRef.current || !routeGeoJSON) return;
+    if (!mapRef.current.isStyleLoaded()) return;
+
+    if (mapRef.current.getSource("evac-route")) {
+      mapRef.current.getSource("evac-route").setData(routeGeoJSON);
+      return;
+    }
+
+    mapRef.current.addSource("evac-route", {
+      type: "geojson",
+      data: routeGeoJSON
+    });
+
+    mapRef.current.addLayer({
+      id: "evac-route",
+      type: "line",
+      source: "evac-route",
+      paint: {
+        "line-width": 5,
+        "line-color": "#2563eb"
+      }
+    });
+
+  }, [routeGeoJSON]);
+
+  useEffect(() => {
+    if (!mapRef.current || shelters.length === 0) return;
+    if (!mapRef.current.isStyleLoaded()) return;
+
+    const geojson = { type: "FeatureCollection", features: shelters };
+
+    if (!mapRef.current.getSource("shelters")) {
+      mapRef.current.addSource("shelters", { type: "geojson", data: geojson });
+      mapRef.current.addLayer({
+        id: "shelters",
+        type: "circle",
+        source: "shelters",
+        paint: {
+          "circle-radius": [
+            "case",
+            ["==", ["get", "shelter_id"], selectedShelter],
+            11,
+            6
+          ],
+          "circle-color": [
+            "case",
+            ["==", ["get", "shelter_id"], selectedShelter],
+            "#22c55e",
+            "#3b82f6"
+          ],
+          "circle-stroke-width": [
+            "case",
+            ["==", ["get", "shelter_id"], selectedShelter],
+            3,
+            1
+          ],
+          "circle-stroke-color": "#ffffff"
+        }
+      });
+    } else {
+      mapRef.current.getSource("shelters").setData(geojson);
+      mapRef.current.setPaintProperty("shelters", "circle-radius", [
+        "case",
+        ["==", ["get", "shelter_id"], selectedShelter],
+        11,
+        6
+      ]);
+      mapRef.current.setPaintProperty("shelters", "circle-color", [
+        "case",
+        ["==", ["get", "shelter_id"], selectedShelter],
+        "#22c55e",
+        "#3b82f6"
+      ]);
+      mapRef.current.setPaintProperty("shelters", "circle-stroke-width", [
+        "case",
+        ["==", ["get", "shelter_id"], selectedShelter],
+        3,
+        1
+      ]);
+    }
+  }, [shelters, selectedShelter]);
+
+  useEffect(() => {
+    activePanelRef.current = activePanel;
+  }, [activePanel]);
+
+  useEffect(() => {
+    if (!mapRef.current || !selectedShelter) return;
+
+    const shelter = shelters.find(
+      s => s.properties.shelter_id === selectedShelter
+    );
+
+    if (!shelter) return;
+
+    const [lng, lat] = shelter.geometry.coordinates;
+
+    mapRef.current.flyTo({
+      center: [101.6165, 3.1292],
+      zoom: 11,
+      duration: 800
+    });
+
+  }, [selectedShelter]);
 
   return (
     <div className="relative w-full h-full">
@@ -313,7 +464,7 @@ map.on("mouseleave", "readiness-layer", () => {
 
 async function addShelterLayer(map) {
 
-  const geojson = await shelterCSVToGeoJSON("/pj_shelters.csv");
+  const geojson = await shelterCSVToGeoJSON("../../public/pj_shelters.csv");
 
   if (!map.getSource("shelter-source")) {
     map.addSource("shelter-source", {
@@ -359,31 +510,29 @@ function shelterPopupHandler(e) {
     .addTo(e.target);
 }
 
-function addRouteLayer(map, geojson) {
+function addRoadLayer(map, geojson) {
 
-  if (!map.getSource("route-source")) {
-    map.addSource("route-source", {
+  if (!map.getSource("pj-roads-source")) {
+    map.addSource("pj-roads-source", {
       type: "geojson",
       data: geojson
     });
   } else {
-    map.getSource("route-source").setData(geojson);
+    map.getSource("pj-roads-source").setData(geojson);
   }
 
-  /* Remove existing layers first (important) */
-  if (map.getLayer("route-shadow-layer")) {
-    map.removeLayer("route-shadow-layer");
+  if (map.getLayer("pj-roads-shadow")) {
+    map.removeLayer("pj-roads-shadow");
   }
 
-  if (map.getLayer("route-layer")) {
-    map.removeLayer("route-layer");
+  if (map.getLayer("pj-roads")) {
+    map.removeLayer("pj-roads");
   }
 
-  /* Shadow layer */
   map.addLayer({
-    id: "route-shadow-layer",
+    id: "pj-roads-shadow",
     type: "line",
-    source: "route-source",
+    source: "pj-roads-source",
     layout: {
       "line-cap": "round",
       "line-join": "round"
@@ -398,16 +547,15 @@ function addRouteLayer(map, geojson) {
         14, 4,
         18, 6
       ],
-      "line-opacity": 0.35,
+      "line-opacity": 0.25,
       "line-blur": 1.5
     }
   });
 
-  /* Main route layer */
   map.addLayer({
-    id: "route-layer",
+    id: "pj-roads",
     type: "line",
-    source: "route-source",
+    source: "pj-roads-source",
     layout: {
       "line-cap": "round",
       "line-join": "round"
@@ -422,7 +570,55 @@ function addRouteLayer(map, geojson) {
         14, 2.5,
         18, 4
       ],
-      "line-opacity": 0.7
+      "line-opacity": 0.5
     }
   });
+
+}
+
+/**
+ * Draws a route on the map
+ * @param {*} map 
+ * @param {*} geojson 
+ */
+export function drawRoute(map, geojson) {
+
+  if (!map.getSource("evac-route")) {
+    map.addSource("evac-route", {
+      type: "geojson",
+      data: geojson
+    });
+
+    map.addLayer({
+      id: "evac-route",
+      type: "line",
+      source: "evac-route",
+      paint: {
+        "line-color": "#2563eb",
+        "line-width": 6
+      }
+    });
+
+  } else {
+    map.getSource("evac-route").setData(geojson);
+  }
+
+}
+/**
+ * Clears the route from the map
+ * @param {*} map 
+ * @returns 
+ */
+export function clearRoute(map) {
+
+  if (!map) return;
+
+  if (map.getLayer("evac-route")) {
+    map.removeLayer("evac-route");
+  }
+
+  if (map.getSource("evac-route")) {
+    map.removeSource("evac-route");
+  }
+
 }
