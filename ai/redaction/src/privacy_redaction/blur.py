@@ -1,14 +1,28 @@
-"""Module for blurring bounding boxes in images for privacy redaction."""
+"""Blurring module for privacy redaction."""
 
 import cv2
 
 
-def blur_boxes(image, boxes, ksize=51):
-    """Applies Gaussian Blur to bounding boxes in the image."""
-    for x1, y1, x2, y2 in boxes:
-        face = image[y1:y2, x1:x2]
-        if face.size == 0:
+def blur_boxes(image, boxes):
+    """Apply a strong blur to the specified bounding boxes in the image."""
+    h_img, w_img = image.shape[:2]
+
+    for x, y, w, h in boxes:
+        x = max(0, x)
+        y = max(0, y)
+        w = min(w, w_img - x)
+        h = min(h, h_img - y)
+
+        if w <= 0 or h <= 0:
             continue
-        blurred_face = cv2.GaussianBlur(face, (ksize, ksize), 0)
-        image[y1:y2, x1:x2] = blurred_face
+
+        roi = image[y : y + h, x : x + w]
+
+        if roi.size == 0:
+            continue
+
+        blurred = cv2.GaussianBlur(roi, (31, 31), 0)
+
+        image[y : y + h, x : x + w] = blurred
+
     return image
