@@ -75,10 +75,16 @@ def download_safe_shelters():
         gdf = gdf.head(5).reset_index(drop=True)
         gdf.index.name = "id"
 
-        # Save Local CSV (Backup)
+        # Save Local CSV (Backup) - specifically formatted for frontend's shelterCSVToGeoJSON
         ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
         output_file = ARTIFACTS_DIR / "pj_shelters.csv"
-        gdf.to_csv(output_file)
+
+        # Prepare CSV output with split lat/lon for easy frontend parsing
+        csv_df = gdf.copy()
+        csv_df["lat"] = gdf.geometry.y
+        csv_df["lon"] = gdf.geometry.x
+        csv_df = csv_df.drop(columns=["geometry"])
+        csv_df.to_csv(output_file, index=True, index_label="shelter_id")
 
         # Upload to Supabase
         db_url = settings.database_url
