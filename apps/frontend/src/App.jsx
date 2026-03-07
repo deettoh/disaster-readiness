@@ -6,6 +6,7 @@ import ReadinessPanel from "./components/panels/ReadinessPanel";
 import AlertsPanel from "./components/panels/AlertsPanel";
 import RoutePanel from "./components/panels/RoutePanel";
 import { getMockAlerts } from "./mock/mockAlerts"; // remove when real API is ready
+import { shelterCSVToGeoJSON } from "./utils/geojson";
 /** 
  * Main entry point of the application. 
  * Overall layout: nav bar, full-screen map, and desktop side panel. 
@@ -26,7 +27,7 @@ export default function App() {
   });
   const handleAlertClick = (alert) => {
     if (!alert?.cell_id) return;
-    setSelectedAlertId(popupAlert.alert_id);
+    setSelectedAlertId(alert.alert_id);
     setActivePanel("alerts");
     setZoomTrigger({
       cell: alert.cell_id,
@@ -34,6 +35,11 @@ export default function App() {
     });
   };
   const [selectedAlertId, setSelectedAlertId] = useState(null);
+  const [origin, setOrigin] = useState(null);
+  const [shelters, setShelters] = useState([]);
+  const [routeGeoJSON, setRouteGeoJSON] = useState(null);
+  const [routeSummary, setRouteSummary] = useState(null);
+  const [selectedShelter, setSelectedShelter] = useState("");
 
  useEffect(() => {
     let interval;
@@ -71,6 +77,22 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    async function loadShelters() {
+      const geojson = await shelterCSVToGeoJSON("../public/pj_shelters.csv");
+      setShelters(geojson.features);
+    }
+
+    loadShelters();
+  }, []);
+
+  useEffect(() => {
+    if (activePanel !== "route") {
+      setOrigin(null);
+      setRouteGeoJSON(null);
+    }
+  }, [activePanel]);
+
   return (
     <div className="h-screen w-screen flex flex-col">
       
@@ -91,11 +113,16 @@ export default function App() {
               setSelectedHazard(hazard);
               setShowMobileInfo(true);
             }}
-            onCellHover={(cell) => {
-              setHoveredCell(cell);
-            }}
+            onCellHover={(cell) => setHoveredCell(cell)}
             setReadinessGeoJSON={setReadinessGeoJSON}
             zoomCell={zoomTrigger}
+
+            shelters={shelters}
+            selectedShelter={selectedShelter}
+            origin={origin}
+            setOrigin={setOrigin}
+            routeGeoJSON={routeGeoJSON}
+            activePanel={activePanel}
           />
           
           {/* Floating Report Button */}
@@ -177,7 +204,25 @@ export default function App() {
               />
             )}
 
-            {activePanel === "route" && <RoutePanel />}
+            {activePanel === "route" && (
+              <RoutePanel
+                origin={origin}
+                shelters={shelters}
+                selectedShelter={selectedShelter}
+                setSelectedShelter={setSelectedShelter}
+                setOrigin={setOrigin}
+                onDrawRoute={(geojson) => {
+                  setRouteGeoJSON(geojson);
+                }}
+
+                onClearRoute={() => {
+                  setRouteGeoJSON(null);
+                  setRouteSummary?.(null);
+                  setOrigin(null);
+                  setSelectedShelter("");
+                }}
+              />
+            )}
           </div>
 
         </div>
