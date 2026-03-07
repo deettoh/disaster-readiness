@@ -52,6 +52,7 @@ class Settings(BaseSettings):
     data_backend: Literal["mock", "sql"] = "mock"
     routing_backend: Literal["mock", "sql"] = "mock"
     routing_algorithm: Literal["dijkstra", "astar"] = "dijkstra"
+    weather_backend: Literal["mock", "live"] = "mock"
 
     model_config = SettingsConfigDict(
         env_file=".env",

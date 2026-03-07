@@ -38,7 +38,7 @@ export default function MapView({
 
     map.on("load", async () => {
       try {
-        const routeRes = await fetch("/data/pj_routes.geojson");
+        const routeRes = await fetch("/pj_routes.geojson");
         const routeGeoJSON = await routeRes.json();
         addRouteLayer(map, routeGeoJSON);
 

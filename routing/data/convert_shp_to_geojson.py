@@ -1,19 +1,27 @@
-import geopandas as gpd
+"""Convert PJ roads shapefile to GeoJSON."""
+
 import os
+from pathlib import Path
 
-input_shp = "../../pj_mvp_data/pj_roads.shp"
-output_geojson = "../../apps/frontend/public/data/pj_routes.geojson"
+import geopandas as gpd
 
-print("Converting shapefile to GeoJSON...")
+BASE_DIR = Path(__file__).parent.resolve()
 
-# Ensure output directory exists
-os.makedirs("../../apps/frontend/public/data", exist_ok=True)
+input_shp = BASE_DIR / "pj_mvp_data" / "pj_roads.shp"
 
-gdf = gpd.read_file(input_shp)
+output_geojson = (
+    BASE_DIR.parents[1] / "apps" / "frontend" / "public" / "pj_routes.geojson"
+)
+
+print(f"Converting shapefile to GeoJSON: {input_shp}")
+
+os.makedirs(output_geojson.parent, exist_ok=True)
+
+gdf = gpd.read_file(str(input_shp))
 
 # IMPORTANT: Reproject to WGS84 (MapLibre requirement)
 gdf = gdf.to_crs(epsg=4326)
 
-gdf.to_file(output_geojson, driver="GeoJSON")
+gdf.to_file(str(output_geojson), driver="GeoJSON")
 
-print("Route GeoJSON exported successfully.")
+print(f"Route GeoJSON exported successfully to: {output_geojson}")
