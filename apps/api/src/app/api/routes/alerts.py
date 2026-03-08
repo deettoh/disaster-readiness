@@ -1,4 +1,4 @@
-"""Alert endpoints (stubbed)."""
+"""Alert endpoints."""
 
 from fastapi import APIRouter, Depends
 

@@ -12,10 +12,10 @@ def build_topology():
     print(f"Target Environment: {settings.app_env.upper()}")
 
     # Safely extract host for logging
-    db_host = settings.routing_database_url.split('@')[-1]
+    db_host = settings.database_url.split('@')[-1]
     print(f"Connecting to: {db_host}")
 
-    engine = create_engine(settings.routing_database_url)
+    engine = create_engine(settings.database_url)
 
     # Prepare Source/Target Columns
     print("Preparing source and target columns in 'pj_roads'...")

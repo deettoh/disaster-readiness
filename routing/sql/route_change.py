@@ -14,7 +14,7 @@ class RouteHazardVerifier:
 
     def __init__(self):
         """Initializes database connection and managers."""
-        self.engine = create_engine(settings.routing_database_url)
+        self.engine = create_engine(settings.database_url)
 
         # Initialize Penalty Manager (this one usually takes the engine)
         self.rpm = RadiusPenaltyManager(self.engine)

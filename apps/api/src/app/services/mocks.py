@@ -14,6 +14,7 @@ from app.schemas.reports import (
     ReportStatusResponse,
 )
 from app.schemas.routing import RouteRequest, RouteResponse
+from app.schemas.weather import RainfallReading, WeatherSnapshotResponse
 
 
 class MockReportRepository:
@@ -156,7 +157,9 @@ class MockRoutingService:
                 }
             ],
         }
-        return RouteResponse(route_geojson=geometry, distance_meters=500.0, eta_minutes=7.5)
+        return RouteResponse(
+            route_geojson=geometry, distance_meters=500.0, eta_minutes=7.5
+        )
 
 
 class MockReportStatusStore:
@@ -255,3 +258,46 @@ class MockPostProcessingHooks:
     def snapshot(self) -> dict[str, list[str]]:
         """Return captured trigger calls."""
         return {name: calls[:] for name, calls in self.trigger_calls.items()}
+
+
+class MockWeatherService:
+    """Mock weather service returning synthetic rainfall data."""
+
+    async def get_weather_snapshot(self) -> WeatherSnapshotResponse:
+        """Return static weather readings for integration scaffolding."""
+        now = datetime.now(tz=UTC)
+        return WeatherSnapshotResponse(
+            readings=[
+                RainfallReading(
+                    neighbourhood="PJU 5",
+                    lat=3.1711,
+                    lng=101.5805,
+                    precipitation_mm=2.4,
+                    temperature_c=29.1,
+                    relative_humidity=78.0,
+                    weather_code=61,
+                    timestamp=now,
+                ),
+                RainfallReading(
+                    neighbourhood="SS 2",
+                    lat=3.1163,
+                    lng=101.6190,
+                    precipitation_mm=0.0,
+                    temperature_c=31.2,
+                    relative_humidity=65.0,
+                    weather_code=3,
+                    timestamp=now,
+                ),
+                RainfallReading(
+                    neighbourhood="Seksyen 13",
+                    lat=3.1149,
+                    lng=101.6375,
+                    precipitation_mm=5.1,
+                    temperature_c=27.8,
+                    relative_humidity=88.0,
+                    weather_code=63,
+                    timestamp=now,
+                ),
+            ],
+            fetched_at=now,
+        )

@@ -43,7 +43,7 @@ def download_pj_road_graph():
     print(f"Stats: {len(nodes)} nodes and {len(edges)} road segments extracted.")
 
     # Integration Check: Safety log to show where we're pointing
-    db_host = settings.routing_database_url.split('@')[-1]
+    db_host = settings.database_url.split('@')[-1]
     print(f"Configured for Database: {db_host}")
 
     # Optional: Plot for visual verification

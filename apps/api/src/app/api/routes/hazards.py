@@ -1,4 +1,4 @@
-"""Hazard endpoints (stubbed)."""
+"""Hazard endpoints."""
 
 from fastapi import APIRouter, Depends
 

@@ -25,7 +25,7 @@ def get_random_node_ids(conn):
 
 def get_route_output_by_nodes(start_node, end_node):
     """Generates GeoJSON geometries and travel metrics for randomized routes."""
-    engine = create_engine(settings.routing_database_url)
+    engine = create_engine(settings.database_url)
 
     # PostGIS query to aggregate segments into a single LineString GeoJSON
     route_query = """
@@ -99,10 +99,10 @@ if __name__ == "__main__":
     print(f"--- {settings.app_name}: Randomized Route Export ---")
     print(f"Target Environment: {settings.app_env.upper()}")
 
-    db_host = settings.routing_database_url.split('@')[-1]
+    db_host = settings.database_url.split('@')[-1]
     print(f"Connecting to: {db_host}\n")
 
-    engine = create_engine(settings.routing_database_url)
+    engine = create_engine(settings.database_url)
 
     with engine.connect() as conn:
         node_a, node_b = get_random_node_ids(conn)

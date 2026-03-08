@@ -18,6 +18,7 @@ from app.services.interfaces import (
     ReportRepository,
     ReportStatusStore,
     RoutingService,
+    WeatherQueryService,
 )
 from app.services.mocks import (
     MockAlertService,
@@ -28,10 +29,12 @@ from app.services.mocks import (
     MockReportRepository,
     MockReportStatusStore,
     MockRoutingService,
+    MockWeatherService,
 )
 from app.services.orchestration import ReportOrchestrationService
 from app.services.queue_backends import RQQueueClient
 from app.services.routing_sql import SQLRoutingService
+from app.services.weather_service import WeatherService
 
 _report_repo = MockReportRepository()
 _mock_queue_client = MockQueueClient()
@@ -46,6 +49,8 @@ _sql_alert_service: SQLAlertRepository | None = None
 _sql_routing_service: SQLRoutingService | None = None
 _status_store = MockReportStatusStore()
 _post_processing_hooks = MockPostProcessingHooks()
+_mock_weather_service = MockWeatherService()
+_live_weather_service: WeatherService | None = None
 _rq_queue_client: RQQueueClient | None = None
 _orchestration_service: ReportOrchestrationService | None = None
 _rate_limiter = InMemoryRateLimiter()
@@ -69,9 +74,7 @@ def get_report_repository() -> ReportRepository:
 
     global _sql_report_repository
     if _sql_report_repository is None:
-        _sql_report_repository = SQLReportRepository(
-            database_url=settings.data_database_url
-        )
+        _sql_report_repository = SQLReportRepository(database_url=settings.database_url)
     return _sql_report_repository
 
 
@@ -101,9 +104,7 @@ def get_hazard_service() -> HazardQueryService:
 
     global _sql_hazard_service
     if _sql_hazard_service is None:
-        _sql_hazard_service = SQLHazardRepository(
-            database_url=settings.data_database_url
-        )
+        _sql_hazard_service = SQLHazardRepository(database_url=settings.database_url)
     return _sql_hazard_service
 
 
@@ -116,7 +117,7 @@ def get_readiness_service() -> ReadinessQueryService:
     global _sql_readiness_service
     if _sql_readiness_service is None:
         _sql_readiness_service = SQLReadinessRepository(
-            database_url=settings.data_database_url
+            database_url=settings.database_url
         )
     return _sql_readiness_service
 
@@ -129,7 +130,7 @@ def get_alert_service() -> AlertQueryService:
 
     global _sql_alert_service
     if _sql_alert_service is None:
-        _sql_alert_service = SQLAlertRepository(database_url=settings.data_database_url)
+        _sql_alert_service = SQLAlertRepository(database_url=settings.database_url)
     return _sql_alert_service
 
 
@@ -142,7 +143,7 @@ def get_routing_service() -> RoutingService:
     global _sql_routing_service
     if _sql_routing_service is None:
         _sql_routing_service = SQLRoutingService(
-            database_url=settings.routing_database_url,
+            database_url=settings.database_url,
             algorithm=settings.routing_algorithm,
         )
     return _sql_routing_service
@@ -156,6 +157,18 @@ def get_report_status_store() -> ReportStatusStore:
 def get_post_processing_hooks() -> PostProcessingHooks:
     """Return the post-processing hooks dependency."""
     return _post_processing_hooks
+
+
+def get_weather_service() -> WeatherQueryService:
+    """Return the weather service dependency."""
+    settings = get_settings()
+    if settings.weather_backend == "mock":
+        return _mock_weather_service
+
+    global _live_weather_service
+    if _live_weather_service is None:
+        _live_weather_service = WeatherService()
+    return _live_weather_service
 
 
 def get_orchestration_service() -> ReportOrchestrationService:
