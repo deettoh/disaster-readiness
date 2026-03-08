@@ -7,10 +7,10 @@ import geopandas as gpd
 
 BASE_DIR = Path(__file__).parent.resolve()
 
-input_shp = BASE_DIR / "pj_mvp_data" / "pj_roads.shp"
+input_shp = BASE_DIR.parent / "pj_mvp_data" / "pj_roads.shp"
 
 output_geojson = (
-    BASE_DIR.parents[1] / "apps" / "frontend" / "public" / "pj_routes.geojson"
+    BASE_DIR.parents[2] / "apps" / "frontend" / "public" / "pj_routes.geojson"
 )
 
 print(f"Converting shapefile to GeoJSON: {input_shp}")

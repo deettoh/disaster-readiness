@@ -11,7 +11,7 @@ from sqlalchemy import create_engine
 settings = get_settings()
 
 # Define Artifacts directory relative to this file
-ARTIFACTS_DIR = Path(__file__).resolve().parents[1] / "artifacts"
+ARTIFACTS_DIR = Path(__file__).resolve().parents[2] / "artifacts"
 
 
 def visualize_full_map():
@@ -20,7 +20,7 @@ def visualize_full_map():
     print(f"Target Environment: {settings.app_env.upper()}")
 
     # Safely extract host for logging (don't print password)
-    db_host = settings.database_url.split('@')[-1]
+    db_host = settings.database_url.split("@")[-1]
     print(f"Connecting to: {db_host}")
 
     # Use the database URL from centralized settings
@@ -34,7 +34,9 @@ def visualize_full_map():
         gdf = gpd.read_postgis(query, engine, geom_col="geometry")
 
         if gdf.empty:
-            print(f"Warning: No data found in 'pj_roads' for {settings.app_env.upper()}. Did you run load_postgres.py?")
+            print(
+                f"Warning: No data found in 'pj_roads' for {settings.app_env.upper()}. Did you run load_postgres.py?"
+            )
             return
 
         print(f"Loaded {len(gdf)} road segments.")
@@ -47,16 +49,22 @@ def visualize_full_map():
         # Plotting with categorization based on road type (highway)
         gdf.plot(
             ax=ax,
-            column='highway',
+            column="highway",
             legend=True,
             linewidth=0.5,
             alpha=0.8,
-            cmap='tab20b',
-            legend_kwds={'loc': 'upper left', 'bbox_to_anchor': (1, 1), 'fontsize': 'small'}
+            cmap="tab20b",
+            legend_kwds={
+                "loc": "upper left",
+                "bbox_to_anchor": (1, 1),
+                "fontsize": "small",
+            },
         )
 
         # Final Formatting
-        ax.set_title(f"Road Network: Petaling Jaya ({settings.app_env.upper()})", fontsize=15)
+        ax.set_title(
+            f"Road Network: Petaling Jaya ({settings.app_env.upper()})", fontsize=15
+        )
         ax.set_axis_off()
 
         # Ensure artifacts directory exists
@@ -64,7 +72,7 @@ def visualize_full_map():
         output_path = ARTIFACTS_DIR / "pj_full_map_visualization.png"
 
         # Save the result
-        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        plt.savefig(output_path, dpi=300, bbox_inches="tight")
         print(f"SUCCESS: Visualization saved as: {output_path}")
 
         # Display if running in an interactive environment (e.g., Jupyter)
@@ -72,6 +80,7 @@ def visualize_full_map():
 
     except Exception as e:
         print(f"CRITICAL ERROR: Database/Visualization failed: {e}")
+
 
 if __name__ == "__main__":
     visualize_full_map()
