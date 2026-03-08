@@ -492,7 +492,7 @@ map.on("mouseleave", "readiness-layer", () => {
 
 async function addShelterLayer(map) {
 
-  const geojson = await shelterCSVToGeoJSON("../../public/pj_shelters.csv");
+  const geojson = await shelterCSVToGeoJSON("/pj_shelters.csv");
 
   if (!map.getSource("shelter-source")) {
     map.addSource("shelter-source", {
