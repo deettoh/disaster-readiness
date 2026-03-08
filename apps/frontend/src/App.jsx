@@ -50,6 +50,24 @@ export default function App() {
   const velocityRef = useRef(0);
   const animationFrameRef = useRef(null);
 
+  const [layers, setLayers] = useState({
+    highReadiness: true,
+    mediumReadiness: true,
+    lowReadiness: true,
+    flood: true,
+    fire: true,
+    landslide: true,
+    normal: true,
+    shelter: true,
+    route: true
+  });
+
+  const toggleLayer = (layer) => {
+    setLayers((prev) => ({
+      ...prev,
+      [layer]: !prev[layer]
+    }));
+  };
   const handleDragStart = (e) => {
     dragStartYRef.current = e.touches[0].clientY;
     lastMoveTimeRef.current = performance.now();
@@ -216,6 +234,9 @@ export default function App() {
             setOrigin={setOrigin}
             routeGeoJSON={routeGeoJSON}
             activePanel={activePanel}
+
+            layers={layers}
+            toggleLayer={toggleLayer}
           />
           
           {/* Floating Report Button */}

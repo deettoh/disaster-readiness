@@ -6,6 +6,7 @@ import { hazardsToGeoJSON } from "../utils/geojson";
 import { mergeReadinessIntoGeoJSON } from "../utils/geojson";
 import { shelterCSVToGeoJSON } from "../utils/geojson";
 import LegendPanel from "./LegendPanel";
+import { updateLayerVisibility } from "./layerController";
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -21,7 +22,9 @@ export default function MapView({
   setOrigin,
   routeGeoJSON,
   selectedShelter,
-  activePanel
+  activePanel,
+  layers,
+  toggleLayer
 }) {
   const mapContainer = useRef(null);
   const mapRef = useRef(null);
@@ -252,10 +255,22 @@ export default function MapView({
 
   }, [selectedShelter]);
 
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (!map.isStyleLoaded()) return;
+
+    updateLayerVisibility(map, layers);
+
+  }, [layers]);
+
   return (
     <div className="relative w-full h-full">
       <div ref={mapContainer} className="w-full h-full" />
-      <LegendPanel />
+      <LegendPanel 
+        layers={layers}
+        toggleLayer={toggleLayer}
+      />
     </div>
   );
 }
@@ -342,65 +357,78 @@ function addHazardLayer(map, geojson, onHazardClick) {
     data: geojson,
   });
 
-  map.addLayer({
-    id: "hazards-layer",
-    type: "circle",
-    source: "hazards",
-    paint: {
-      "circle-radius": 7,
-      "circle-color": [
-        "match",
-        ["get", "label"],
-        "flood", "#2563eb",
-        "fire", "#dc2626",
-        "landslide", "#f59e0b",
-        "#00ff48"
-      ],
-      "circle-opacity": ["get", "confidence"],
-    },
+  const hazardTypes = [
+    { id: "flood", color: "#2563eb" },
+    { id: "fire", color: "#dc2626" },
+    { id: "landslide", color: "#f59e0b" },
+    { id: "normal", color: "#00ff48" }
+  ];
+
+  hazardTypes.forEach((hazard) => {
+
+    map.addLayer({
+      id: `hazards-${hazard.id}`,
+      type: "circle",
+      source: "hazards",
+      filter: ["==", ["get", "label"], hazard.id],
+      paint: {
+        "circle-radius": 7,
+        "circle-color": hazard.color,
+        "circle-opacity": ["get", "confidence"],
+      }
+    });
+
+    // click event
+    map.on("click", `hazards-${hazard.id}`, (e) => {
+
+      if (!e.features?.length) return;
+
+      const feature = e.features[0];
+
+      const hazardData = {
+        report_id: feature.properties.report_id,
+        confidence: feature.properties.confidence,
+        label: feature.properties.label,
+        redacted_image_url: feature.properties.image,
+        observed_at: feature.properties.observed_at
+      };
+
+      onHazardClick?.(hazardData);
+    });
+
   });
 
-  map.on("click", "hazards-layer", (e) => {
-
-  if (!e.features?.length) return;
-
-  const feature = e.features[0];
-
-  const hazardData = {
-    report_id: feature.properties.report_id,
-    confidence: feature.properties.confidence,
-    label: feature.properties.label,
-    redacted_image_url: feature.properties.image,
-    observed_at: feature.properties.observed_at
-  };
-
-  onHazardClick?.(hazardData);
-
-});
-
-  // Hover popup
+  // Hover popup (works for all layers)
   const hoverPopup = new maplibregl.Popup({
     closeButton: false,
     closeOnClick: false,
   });
 
-  map.on("mouseenter", "hazards-layer", (e) => {
-    map.getCanvas().style.cursor = "pointer";
-    const props = e.features[0].properties;
+  hazardTypes.forEach((hazard) => {
 
-    hoverPopup
-      .setLngLat(e.lngLat)
-      .setHTML(`
-        <strong>${props.label}</strong><br/>
-        Confidence: ${Number(props.confidence).toFixed(2)}
-      `)
-      .addTo(map);
+    map.on("mouseenter", `hazards-${hazard.id}`, (e) => {
+
+      map.getCanvas().style.cursor = "pointer";
+
+      const props = e.features[0].properties;
+
+      hoverPopup
+        .setLngLat(e.lngLat)
+        .setHTML(`
+          <strong>${props.label}</strong><br/>
+          Confidence: ${Number(props.confidence).toFixed(2)}
+        `)
+        .addTo(map);
+    });
+
+    map.on("mouseleave", `hazards-${hazard.id}`, () => {
+
+      map.getCanvas().style.cursor = "";
+      hoverPopup.remove();
+    });
+
   });
 
-  map.on("mouseleave", "hazards-layer", () => {
-    map.getCanvas().style.cursor = "";
-    hoverPopup.remove();
-  });
 }
 
 function addReadinessLayer(map, geojson, onCellHover) {
