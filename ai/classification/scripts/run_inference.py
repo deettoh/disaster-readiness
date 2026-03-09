@@ -6,7 +6,9 @@ import os
 import sys
 from pathlib import Path
 
-ROOT_DIR = Path(__file__).resolve().parents[1]
+from hazard_classification.inference import predict_hazard
+
+ROOT_DIR = Path(__file__).resolve().parents[3]
 CLASSIFICATION_SRC = ROOT_DIR / "ai" / "classification" / "src"
 DEFAULT_IMAGE_FILE = (
     ROOT_DIR / "data" / "samples" / "classification_inference" / "images" / "sample.jpg"
@@ -34,8 +36,6 @@ def _get_image_path() -> Path:
 
 def main() -> int:
     """Run real model inference on one configured image."""
-    from hazard_classification.inference import predict_hazard
-
     image_path = _get_image_path()
     if not image_path.exists():
         print(f"Test image does not exist: {image_path}")
