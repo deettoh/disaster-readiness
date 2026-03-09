@@ -4,17 +4,17 @@ import argparse
 import os
 import sys
 
-import geopandas as gpd
-import numpy as np
-from dotenv import load_dotenv
-from shapely.geometry import Polygon
-from sqlalchemy import create_engine, text
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+sys.path.insert(0, ROOT_DIR)
+sys.path.insert(0, os.path.join(ROOT_DIR, "apps", "api", "src"))
+
+import geopandas as gpd  # noqa: E402
+import numpy as np  # noqa: E402
+from dotenv import load_dotenv  # noqa: E402
+from shapely.geometry import Polygon  # noqa: E402
+from sqlalchemy import create_engine, text  # noqa: E402
 
 from app.core.config import get_settings  # noqa: E402
-
-ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-sys.path.append(ROOT_DIR)
-sys.path.append(os.path.join(ROOT_DIR, "apps", "api", "src"))
 
 load_dotenv(os.path.join(ROOT_DIR, ".env"))
 

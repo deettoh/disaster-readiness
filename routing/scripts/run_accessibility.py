@@ -7,18 +7,18 @@ import os
 import sys
 from pathlib import Path
 
-from apps.api.src.app.core.config import get_settings  # noqa: E402
-from dotenv import load_dotenv
-
-from routing.sql.accessibility import AccessibilityManager  # noqa: E402
-
 ROOT_DIR = Path(__file__).resolve().parents[2]
 API_SRC = ROOT_DIR / "apps" / "api" / "src"
 for path in (str(ROOT_DIR), str(API_SRC)):
     if path not in sys.path:
         sys.path.insert(0, path)
 
+from dotenv import load_dotenv  # noqa: E402
+
 load_dotenv(ROOT_DIR / ".env")
+
+from app.core.config import get_settings  # noqa: E402
+from routing.sql.accessibility import AccessibilityManager  # noqa: E402
 
 
 def _default_database_url() -> str:
