@@ -8,19 +8,18 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from fastapi.testclient import TestClient  # noqa: E402
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
+
+from app.core.config import get_settings  # noqa: E402
+from app.main import create_app  # noqa: E402
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
 API_SRC = ROOT_DIR / "apps" / "api" / "src"
 for path in (str(ROOT_DIR), str(API_SRC)):
     if path not in sys.path:
         sys.path.insert(0, path)
-
-from fastapi.testclient import TestClient  # noqa: E402
-
-from app.core.config import get_settings  # noqa: E402
-from app.main import create_app  # noqa: E402
 
 
 def _default_database_url() -> str:

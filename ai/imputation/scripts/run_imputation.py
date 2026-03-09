@@ -19,12 +19,13 @@ import os
 import sys
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 from ai.imputation.src.risk_imputation.db_writeback import (
     run_writeback,
     verify_writeback,
 )
 from ai.imputation.src.risk_imputation.inference import run_inference
-from dotenv import load_dotenv
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 if str(PROJECT_ROOT) not in sys.path:
