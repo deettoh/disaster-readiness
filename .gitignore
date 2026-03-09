@@ -49,3 +49,10 @@ notebook/.ipynb_checkpoints/
 
 # output 
 ai/redaction/outputs/
+data/external/*
+!data/external/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+ai/imputation/artifacts/*
+!ai/imputation/artifacts/.gitkeep
+!ai/imputation/artifacts/vulnerability_choropleth.png
