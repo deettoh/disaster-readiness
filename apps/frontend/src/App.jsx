@@ -190,7 +190,7 @@ export default function App() {
 
   useEffect(() => {
     async function loadShelters() {
-      const geojson = await shelterCSVToGeoJSON("../public/pj_shelters.csv");
+      const geojson = await shelterCSVToGeoJSON("./pj_shelters.csv");
       setShelters(geojson.features);
     }
 
