@@ -32,6 +32,7 @@ from app.services.mocks import (
     MockWeatherService,
 )
 from app.services.orchestration import ReportOrchestrationService
+from app.services.post_processing_sql import SQLPostProcessingHooks
 from app.services.queue_backends import RQQueueClient
 from app.services.routing_sql import SQLRoutingService
 from app.services.weather_service import WeatherService
@@ -49,6 +50,7 @@ _sql_alert_service: SQLAlertRepository | None = None
 _sql_routing_service: SQLRoutingService | None = None
 _status_store = MockReportStatusStore()
 _post_processing_hooks = MockPostProcessingHooks()
+_sql_post_processing_hooks: SQLPostProcessingHooks | None = None
 _mock_weather_service = MockWeatherService()
 _live_weather_service: WeatherService | None = None
 _rq_queue_client: RQQueueClient | None = None
@@ -156,7 +158,19 @@ def get_report_status_store() -> ReportStatusStore:
 
 def get_post_processing_hooks() -> PostProcessingHooks:
     """Return the post-processing hooks dependency."""
-    return _post_processing_hooks
+    settings = get_settings()
+    if settings.data_backend == "mock":
+        return _post_processing_hooks
+
+    global _sql_post_processing_hooks
+    if _sql_post_processing_hooks is None:
+        _sql_post_processing_hooks = SQLPostProcessingHooks(
+            database_url=settings.database_url,
+            road_penalty_radius_m=settings.road_penalty_radius_m,
+            road_penalty_weight=settings.road_penalty_weight,
+            readiness_alert_threshold=settings.readiness_alert_threshold,
+        )
+    return _sql_post_processing_hooks
 
 
 def get_weather_service() -> WeatherQueryService:
