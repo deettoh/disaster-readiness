@@ -11,7 +11,7 @@ from typing import Any
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 
-ROOT_DIR = Path(__file__).resolve().parents[1]
+ROOT_DIR = Path(__file__).resolve().parents[2]
 API_SRC = ROOT_DIR / "apps" / "api" / "src"
 for path in (str(ROOT_DIR), str(API_SRC)):
     if path not in sys.path:
@@ -85,7 +85,9 @@ def assert_compatibility_objects(engine: Engine) -> None:
             text("SELECT to_regclass('public.pj_roads_vertices_pgr') IS NOT NULL;")
         ).scalar_one()
         if not bool(mv_exists):
-            raise RuntimeError("public.pj_roads_vertices_pgr materialized view is missing")
+            raise RuntimeError(
+                "public.pj_roads_vertices_pgr materialized view is missing"
+            )
 
         refresh_fn_exists = conn.execute(
             text(
@@ -99,9 +101,10 @@ def assert_compatibility_objects(engine: Engine) -> None:
 def _sample_start_nodes(engine: Engine, limit: int) -> list[int]:
     """Return random source-node IDs as route start candidates."""
     with engine.connect() as conn:
-        rows = conn.execute(
-            text(
-                """
+        rows = (
+            conn.execute(
+                text(
+                    """
                 SELECT id
                 FROM (
                     SELECT DISTINCT source AS id
@@ -111,18 +114,22 @@ def _sample_start_nodes(engine: Engine, limit: int) -> list[int]:
                 ORDER BY RANDOM()
                 LIMIT :limit;
                 """
-            ),
-            {"limit": limit},
-        ).mappings().all()
+                ),
+                {"limit": limit},
+            )
+            .mappings()
+            .all()
+        )
     return [int(row["id"]) for row in rows]
 
 
 def _sample_edge_pairs(engine: Engine, limit: int) -> list[tuple[int, int]]:
     """Return random directed edge node pairs from pj_roads."""
     with engine.connect() as conn:
-        rows = conn.execute(
-            text(
-                """
+        rows = (
+            conn.execute(
+                text(
+                    """
                 SELECT source, target
                 FROM public.pj_roads
                 WHERE source IS NOT NULL
@@ -132,18 +139,22 @@ def _sample_edge_pairs(engine: Engine, limit: int) -> list[tuple[int, int]]:
                 ORDER BY RANDOM()
                 LIMIT :limit;
                 """
-            ),
-            {"limit": limit},
-        ).mappings().all()
+                ),
+                {"limit": limit},
+            )
+            .mappings()
+            .all()
+        )
     return [(int(row["source"]), int(row["target"])) for row in rows]
 
 
 def _get_node(engine: Engine, node_id: int) -> dict[str, Any]:
     """Return node coordinates for a vertex ID."""
     with engine.connect() as conn:
-        row = conn.execute(
-            text(
-                """
+        row = (
+            conn.execute(
+                text(
+                    """
                 SELECT
                     id,
                     extensions.ST_Y(the_geom) AS lat,
@@ -151,9 +162,12 @@ def _get_node(engine: Engine, node_id: int) -> dict[str, Any]:
                 FROM public.pj_roads_vertices_pgr
                 WHERE id = :node_id;
                 """
-            ),
-            {"node_id": node_id},
-        ).mappings().first()
+                ),
+                {"node_id": node_id},
+            )
+            .mappings()
+            .first()
+        )
     if row is None:
         raise RuntimeError(f"node not found in pj_roads_vertices_pgr: {node_id}")
     return dict(row)
@@ -185,9 +199,10 @@ def _has_path(engine: Engine, start_node: int, end_node: int) -> bool:
 def _find_reachable_end_node(engine: Engine, start_node: int) -> int | None:
     """Find one node reachable from start_node using directed routing costs."""
     with engine.connect() as conn:
-        row = conn.execute(
-            text(
-                """
+        row = (
+            conn.execute(
+                text(
+                    """
                 SELECT dd.node::bigint AS node
                 FROM pgr_drivingDistance(
                     'SELECT id, source, target, agg_cost AS cost, agg_reverse_cost AS reverse_cost FROM public.pj_roads',
@@ -199,15 +214,20 @@ def _find_reachable_end_node(engine: Engine, start_node: int) -> int | None:
                 ORDER BY random()
                 LIMIT 1;
                 """
-            ),
-            {"start_node": start_node},
-        ).mappings().first()
+                ),
+                {"start_node": start_node},
+            )
+            .mappings()
+            .first()
+        )
     if row is None:
         return None
     return int(row["node"])
 
 
-def find_routable_pair(engine: Engine, max_attempts: int) -> tuple[dict[str, Any], dict[str, Any]]:
+def find_routable_pair(
+    engine: Engine, max_attempts: int
+) -> tuple[dict[str, Any], dict[str, Any]]:
     """Find a directed-routable start/end node pair for endpoint verification."""
     # First pass: try pairs from existing directed edges in pj_roads.
     for start_node_id, end_node_id in _sample_edge_pairs(engine, limit=max_attempts):
@@ -237,7 +257,9 @@ def find_routable_pair(engine: Engine, max_attempts: int) -> tuple[dict[str, Any
     )
 
 
-def validate_route_endpoint(database_url: str, start: dict[str, Any], end: dict[str, Any]) -> None:
+def validate_route_endpoint(
+    database_url: str, start: dict[str, Any], end: dict[str, Any]
+) -> None:
     """Call /api/v1/route with SQL backend and assert a valid response."""
     os.environ["ROUTING_BACKEND"] = "sql"
     os.environ["DATABASE_URL"] = database_url
@@ -273,9 +295,7 @@ def main() -> None:
     """Run schema and endpoint verification for SQL routing backend."""
     args = parse_args()
     if not args.database_url:
-        raise RuntimeError(
-            "missing database URL; set --database-url or DATABASE_URL"
-        )
+        raise RuntimeError("missing database URL; set --database-url or DATABASE_URL")
 
     engine = create_engine(args.database_url, pool_pre_ping=True)
     assert_compatibility_objects(engine)

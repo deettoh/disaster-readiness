@@ -24,19 +24,19 @@ Run these steps from repository root.
   ```
 2. **Import Road Network**: Load Petaling Jaya road edges (OSM) into `public.roads_edges`. This uses a pre-processed pg_dump and syncs it with the canonical schema.
   ```bash
-  poetry run python scripts/import_road_edges.py
+  poetry run python routing/scripts/import_roads.py
   ```
 3. **Generate Grid**: Generate a 500m x 500m analysis grid clipped to the PJ boundary and upload to `public.grid_cells`.
   ```bash
-  poetry run python scripts/generate_grid.py
+  poetry run python routing/scripts/generate_grid.py
   ```
 4. **Compute Accessibility Metrics**: Calculate travel times to shelters and road densities for each grid cell.
   ```bash
-  poetry run python scripts/run_accessibility_compute.py
+  poetry run python routing/scripts/run_accessibility.py
   ```
 5. **Verify (Optional)**: Run the end-to-end integration validator.
   ```bash
-  poetry run python scripts/verify_routing_sql_integration.py
+  poetry run python routing/scripts/verify_sql.py
   ```
 
 ### Enable SQL backend in API
