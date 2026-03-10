@@ -64,10 +64,10 @@ export function mergeReadinessIntoGeoJSON(
 
     feature.properties.breakdown =
       readinessData?.breakdown ?? {
-        baseline_vulnerability: 0,
-        recent_hazards: 0,
-        accessibility: 0,
-        coverage_confidence: 0
+        hazard_penalty: 0,
+        vulnerability_penalty: 0,
+        accessibility_bonus: 0,
+        confidence_bonus: 0
       };
 
     feature.properties.updated_at =

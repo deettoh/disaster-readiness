@@ -327,10 +327,10 @@ async function loadReadiness() {
       feature.properties.score = score;
 
       feature.properties.breakdown = {
-        baseline_vulnerability: Math.random(),
-        recent_hazards: Math.random(),
-        accessibility: Math.random(),
-        coverage_confidence: Math.random(),
+        hazard_penalty: Math.random() * 50,
+        vulnerability_penalty: Math.random() * 30,
+        accessibility_bonus: Math.random() * 20,
+        confidence_bonus: Math.random() * 10,
       };
 
       feature.properties.updated_at = new Date().toISOString();
