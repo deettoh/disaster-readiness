@@ -50,14 +50,18 @@ export default function MapView({
       try {
         const routeRes = await fetch("/pj_routes.geojson");
         const routeGeoJSON = await routeRes.json();
-        addRouteLayer(map, routeGeoJSON);
+        addRoadLayer(map, routeGeoJSON);
 
         const readinessGeoJSON = await loadReadiness();
 
-        setLocalReadiness(readinessGeoJSON); 
+        setLocalReadiness(readinessGeoJSON);
         setReadinessGeoJSON?.(readinessGeoJSON);
-
-        addReadinessLayer(map, readinessGeoJSON, onCellHover);
+        console.log("Readiness features sent to map:", readinessGeoJSON.features.length);
+        if (map.getSource("readiness")) {
+          map.getSource("readiness").setData(readinessGeoJSON);
+        } else {
+          addReadinessLayer(map, readinessGeoJSON, onCellHover);
+        }
 
         const hazardGeoJSON = await loadHazards();
 
@@ -313,39 +317,77 @@ async function loadHazards() {
   return hazardsToGeoJSON(data);
 }
 
+// bug
+import * as turf from "@turf/turf";
+
 async function loadReadiness() {
-  // Load neighbourhood polygons first
+  // Load neighbourhood polygons
   const res = await fetch("/pj_neighbourhood.geojson");
   const geojson = await res.json();
 
+  // Filter by admin_level == 10
+  let filteredFeatures = geojson.features.filter((f) => {
+    const level = Number(f.properties.admin_level);
+    return !isNaN(level) && level == 10;
+  });
+
+  // Flatten MultiPolygons so each polygon piece has the same properties
+  filteredFeatures = filteredFeatures.flatMap((f) => {
+    if (f.geometry.type === "MultiPolygon") {
+      return turf.flatten(f).features.map((piece) => {
+        piece.properties = { ...f.properties }; // preserve the original props
+        return piece;
+      });
+    }
+    return f;
+  });
+
+  geojson.features = filteredFeatures;
+
+  // Add mock readiness data if needed
   if (USE_MOCK) {
-
     geojson.features.forEach((feature) => {
-
       const score = Number((Math.random() * 100).toFixed(1));
-
       feature.properties.score = score;
-
       feature.properties.breakdown = {
         baseline_vulnerability: Math.random(),
         recent_hazards: Math.random(),
         accessibility: Math.random(),
         coverage_confidence: Math.random(),
       };
-
       feature.properties.updated_at = new Date().toISOString();
-
     });
-
     return geojson;
   }
 
-  // When backend ready
+  // Backend readiness data
   const apiRes = await fetch(`${API_BASE_URL}/readiness`);
   const readinessData = await apiRes.json();
 
-  return mergeReadinessIntoGeoJSON(geojson, readinessData.items);
+  // Merge backend data by cell_id
+  const readinessMap = new Map();
+  readinessData.items.forEach((item) => {
+    readinessMap.set(item.cell_id, item);
+  });
+
+  geojson.features.forEach((feature) => {
+    const cellId = feature.properties.name?.trim();
+    const readiness = readinessMap.get(cellId);
+
+    feature.properties.score = readiness?.score ?? 0;
+    feature.properties.breakdown = readiness?.breakdown ?? {
+      baseline_vulnerability: 0,
+      recent_hazards: 0,
+      accessibility: 0,
+      coverage_confidence: 0,
+    };
+    feature.properties.updated_at = readiness?.updated_at ?? null;
+  });
+
+  return geojson;
 }
+
+
 
 /*
  * LAYERS
@@ -431,7 +473,13 @@ function addHazardLayer(map, geojson, onHazardClick) {
 
 }
 
+//bug
 function addReadinessLayer(map, geojson, onCellHover) {
+  if (map.getSource("readiness")) {
+    map.getSource("readiness").setData(geojson);
+    return;
+  }
+
   map.addSource("readiness", {
     type: "geojson",
     data: geojson,
@@ -446,23 +494,22 @@ function addReadinessLayer(map, geojson, onCellHover) {
         "interpolate",
         ["linear"],
         ["get", "score"],
-        0,  "#b91c1c",
+        0, "#b91c1c",
         25, "#ef4444",
         50, "#facc15",
         75, "#86efac",
-        100,"#166534"
+        100, "#166534",
       ],
       "fill-opacity": [
         "interpolate",
         ["linear"],
         ["get", "score"],
         0, 0.35,
-        100, 0.65
-      ]
-    }
+        100, 0.65,
+      ],
+    },
   });
 
-  // Map subsection's border
   map.addLayer({
     id: "readiness-border",
     type: "line",
@@ -470,24 +517,21 @@ function addReadinessLayer(map, geojson, onCellHover) {
     paint: {
       "line-color": "#000000",
       "line-width": 1,
-      "line-opacity": 0.1
-    }
+      "line-opacity": 0.1,
+    },
   });
+
   map.on("mousemove", "readiness-layer", (e) => {
+    if (!e.features?.length) {
+      onCellHover?.(null);
+      return;
+    }
+    onCellHover?.(e.features[0]);
+  });
 
-  if (!e.features?.length) {
+  map.on("mouseleave", "readiness-layer", () => {
     onCellHover?.(null);
-    return;
-  }
-
-  onCellHover?.(e.features[0]);
-
-});
-
-// Reset when mouse leaves polygon
-map.on("mouseleave", "readiness-layer", () => {
-  onCellHover?.(null);
-});
+  });
 }
 
 async function addShelterLayer(map) {

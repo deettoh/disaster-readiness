@@ -37,42 +37,25 @@ export function hazardsToGeoJSON(apiResponse) {
  * @param {*} readinessKey 
  * @returns 
  */
-export function mergeReadinessIntoGeoJSON(
-  geojson,
-  readinessItems
-) {
-  if (!geojson?.features || !Array.isArray(readinessItems)) {
-    return geojson;
-  }
+// bug 
+export function mergeReadinessIntoGeoJSON(geojson, readinessItems) {
+  if (!geojson?.features || !Array.isArray(readinessItems)) return geojson;
 
   const readinessMap = new Map();
-
-  readinessItems.forEach(item => {
-    readinessMap.set(item.cell_id, item);
-  });
+  readinessItems.forEach(item => readinessMap.set(item.cell_id, item));
 
   geojson.features.forEach(feature => {
+    const cellId = feature.properties.cell_id?.trim();
+    const data = readinessMap.get(cellId);
 
-    const polygonName =
-      feature.properties.name?.trim();
-
-    const readinessData =
-      readinessMap.get(polygonName);
-
-    feature.properties.score =
-      readinessData?.score ?? 0;
-
-    feature.properties.breakdown =
-      readinessData?.breakdown ?? {
-        baseline_vulnerability: 0,
-        recent_hazards: 0,
-        accessibility: 0,
-        coverage_confidence: 0
-      };
-
-    feature.properties.updated_at =
-      readinessData?.updated_at ?? null;
-
+    feature.properties.score = data?.score ?? 0;
+    feature.properties.breakdown = data?.breakdown ?? {
+      baseline_vulnerability: 0,
+      recent_hazards: 0,
+      accessibility: 0,
+      coverage_confidence: 0
+    };
+    feature.properties.updated_at = data?.updated_at ?? null;
   });
 
   return geojson;

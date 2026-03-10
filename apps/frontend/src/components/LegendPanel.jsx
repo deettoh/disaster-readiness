@@ -1,10 +1,10 @@
 export default function LegendPanel({ layers, toggleLayer }) {
 
   return (
-    <div className="absolute bottom-6 left-6 bg-gray/95 backdrop-blur-md
-      border rounded-xl shadow-lg p-4 text-xs space-y-2 z-40 w-44">
+    <div className="absolute bottom-12 md:bottom-6 left-2 md:left-6 bg-gray/95 backdrop-blur-md
+      border rounded-xl shadow-lg p-2 md:p-4 text-[10px] md:text-xs space-y-1.5 md:space-y-2 z-40 w-32 md:w-44">
 
-      <h3 className="font-semibold text-sm border-b pb-1">
+      <h3 className="font-semibold text-[14px] md:text-sm border-b pb-1">
         Map Legend
       </h3>
 
