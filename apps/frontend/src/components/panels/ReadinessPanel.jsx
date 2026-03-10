@@ -92,7 +92,10 @@ export default function ReadinessPanel({
                     <div key={key}>
                       <div className="flex justify-between text-xs mb-1">
                         <span>{label}</span>
-                        <span>{value.toFixed(1)}%</span>
+                        <span className="font-medium">
+                          {type === "penalty" ? "-" : "+"}
+                          {value.toFixed(1)} pts
+                        </span>
                       </div>
 
                       <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
