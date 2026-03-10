@@ -50,7 +50,7 @@ export default function MapView({
       try {
         const routeRes = await fetch("/pj_routes.geojson");
         const routeGeoJSON = await routeRes.json();
-        addRouteLayer(map, routeGeoJSON);
+        addRoadLayer(map, routeGeoJSON);
 
         const readinessGeoJSON = await loadReadiness();
 
