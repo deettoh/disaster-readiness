@@ -75,6 +75,12 @@ The baseline model was trained with the following hyperparameters:
 4. **road_density**
 5. **travel_time_to_shelter_s**
 
+### Performance
+
+MAE: 0.013068
+R^2: 0.99371
+RMSE: 0.018357
+
 ## Running the Model
 
 The main runner script is now part of the module. Run it from the project root using `poetry`:
