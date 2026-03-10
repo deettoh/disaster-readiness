@@ -5,7 +5,7 @@ import HazardPanel from "./components/panels/HazardPanel";
 import ReadinessPanel from "./components/panels/ReadinessPanel";
 import AlertsPanel from "./components/panels/AlertsPanel";
 import RoutePanel from "./components/panels/RoutePanel";
-import { getMockAlerts } from "./mock/mockAlerts"; // remove when real API is ready
+import { API_BASE_URL } from "./api/config";
 import { shelterCSVToGeoJSON } from "./utils/geojson";
 /** 
  * Main entry point of the application. 
@@ -152,15 +152,13 @@ export default function App() {
     animationFrameRef.current = requestAnimationFrame(animate);
   };
 
- useEffect(() => {
+  useEffect(() => {
     let interval;
 
     async function pollAlerts() {
       try {
-        const data = await getMockAlerts();
-        // fetch api here when ready, using mock for now
-        // const response = await fetch(`${API_BASE_URL}/alerts`);
-        // const data = await response.json();
+        const response = await fetch(`${API_BASE_URL}/alerts`);
+        const data = await response.json();
         if (!data?.items) return;
 
         setAlerts(prev => {
