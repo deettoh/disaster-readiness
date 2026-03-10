@@ -8,11 +8,11 @@ from io import StringIO
 import psycopg2
 from dotenv import load_dotenv
 
-from app.core.config import get_settings  # noqa: E402
-
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 sys.path.append(ROOT_DIR)
 sys.path.append(os.path.join(ROOT_DIR, "apps", "api", "src"))
+
+from app.core.config import get_settings  # noqa: E402
 
 load_dotenv(os.path.join(ROOT_DIR, ".env"))
 
