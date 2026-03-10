@@ -29,18 +29,18 @@
 	 supabase db reset
 
 	 # 2. Import road network (Petaling Jaya)
-	 poetry run python scripts/import_road_edges.py
+	 poetry run python routing/scripts/import_roads.py
 
 	 # 3. Generate analysis grid (500m cells)
-	 poetry run python scripts/generate_grid.py
+	 poetry run python routing/scripts/generate_grid.py
 
 	 # 4. Compute accessibility metrics
-	 poetry run python scripts/run_accessibility_compute.py
+	 poetry run python routing/scripts/run_accessibility.py
 	 ```
 
 ### Note on Seeding:
 - `supabase db reset` handles core schema and static reference data (e.g., shelters).
-- The Python scripts in `scripts/` handle heavy spatial processing (geopandas/pgRouting) that requires external libraries.
+- The Python scripts in `routing/` and `ai/` handle heavy spatial processing (geopandas/pgRouting) that requires external libraries.
 - Frontend `npm run dev` auto-syncs `routing/artifacts/pj_shelters.csv` to its public folder.
 - See [routing/README.md](routing/README.md) for detailed SQL routing setup.
 

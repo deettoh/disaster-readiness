@@ -7,14 +7,17 @@ import os
 import sys
 from pathlib import Path
 
-ROOT_DIR = Path(__file__).resolve().parents[1]
+ROOT_DIR = Path(__file__).resolve().parents[2]
 API_SRC = ROOT_DIR / "apps" / "api" / "src"
 for path in (str(ROOT_DIR), str(API_SRC)):
     if path not in sys.path:
         sys.path.insert(0, path)
 
-from apps.api.src.app.core.config import get_settings  # noqa: E402
+from dotenv import load_dotenv  # noqa: E402
 
+load_dotenv(ROOT_DIR / ".env")
+
+from app.core.config import get_settings  # noqa: E402
 from routing.sql.accessibility import AccessibilityManager  # noqa: E402
 
 
@@ -52,7 +55,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--output",
-        default="routing/artifacts/cell_accessibility_handoff.csv",
+        default=str(ROOT_DIR / "routing/artifacts/cell_accessibility_handoff.csv"),
         help="Output CSV path for handoff to Member B.",
     )
     parser.add_argument(

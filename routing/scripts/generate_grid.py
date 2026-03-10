@@ -4,18 +4,19 @@ import argparse
 import os
 import sys
 
-import geopandas as gpd
-import numpy as np
-from shapely.geometry import Polygon
-from sqlalchemy import create_engine, text
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+sys.path.insert(0, ROOT_DIR)
+sys.path.insert(0, os.path.join(ROOT_DIR, "apps", "api", "src"))
 
-# Add project root and API source to python path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-sys.path.append(
-    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "apps", "api", "src"))
-)
+import geopandas as gpd  # noqa: E402
+import numpy as np  # noqa: E402
+from dotenv import load_dotenv  # noqa: E402
+from shapely.geometry import Polygon  # noqa: E402
+from sqlalchemy import create_engine, text  # noqa: E402
 
 from app.core.config import get_settings  # noqa: E402
+
+load_dotenv(os.path.join(ROOT_DIR, ".env"))
 
 
 def run_grid_generation():
@@ -39,8 +40,8 @@ def run_grid_generation():
     print(f"Connecting to Database: {db_url.split('@')[-1]}")
 
     # 1. Load local PJ Boundary (for clipping) and Neighborhoods (for labeling)
-    boundary_path = "routing/data/pj_boundary.geojson"
-    neighbourhood_path = "routing/data/pj_neighbourhood.geojson"
+    boundary_path = os.path.join(ROOT_DIR, "routing/data/pj_boundary.geojson")
+    neighbourhood_path = os.path.join(ROOT_DIR, "routing/data/pj_neighbourhood.geojson")
 
     if not os.path.exists(boundary_path):
         print(f"Error: Boundary file not found at {boundary_path}")

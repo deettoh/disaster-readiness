@@ -6,16 +6,17 @@ import sys
 from io import StringIO
 
 import psycopg2
-
-# Add project root and API source to python path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-sys.path.append(
-    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "apps", "api", "src"))
-)
+from dotenv import load_dotenv
 
 from app.core.config import get_settings  # noqa: E402
 
-SQL_FILE = "routing/artifacts/pj_processed_roads.sql"
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+sys.path.append(ROOT_DIR)
+sys.path.append(os.path.join(ROOT_DIR, "apps", "api", "src"))
+
+load_dotenv(os.path.join(ROOT_DIR, ".env"))
+
+SQL_FILE = os.path.join(ROOT_DIR, "routing/artifacts/pj_processed_roads.sql")
 
 
 def import_data():
