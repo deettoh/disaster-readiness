@@ -316,7 +316,18 @@ async function loadHazards() {
 async function loadReadiness() {
   // Load neighbourhood polygons first
   const res = await fetch("/pj_neighbourhood.geojson");
-  const geojson = await res.json();
+  const raw = await res.json();
+
+  // Keep only admin level 10 neighbourhood polygons (exclude OSM Point
+  // nodes and higher level boundaries).
+  const geojson = {
+    ...raw,
+    features: raw.features.filter(
+      (f) =>
+        (f.geometry.type === "Polygon" || f.geometry.type === "MultiPolygon") &&
+        f.properties.admin_level === "10"
+    ),
+  };
 
   if (USE_MOCK) {
 
