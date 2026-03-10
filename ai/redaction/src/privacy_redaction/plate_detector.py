@@ -4,7 +4,7 @@ from pathlib import Path
 
 from ultralytics import YOLO
 
-BASE_DIR = Path(__file__).resolve().parent[2]
+BASE_DIR = Path(__file__).resolve().parents[2]
 MODEL_PATH = BASE_DIR / "models" / "best.pt"
 
 
