@@ -325,10 +325,10 @@ async function loadReadiness() {
   const res = await fetch("/pj_neighbourhood.geojson");
   const geojson = await res.json();
 
-  // Filter by admin_level > 7
+  // Filter by admin_level == 10
   let filteredFeatures = geojson.features.filter((f) => {
     const level = Number(f.properties.admin_level);
-    return !isNaN(level) && level > 7;
+    return !isNaN(level) && level == 10;
   });
 
   // Flatten MultiPolygons so each polygon piece has the same properties
