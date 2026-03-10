@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { use, useEffect, useRef, useState } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { MAPTILER_KEY } from "../api/config";
@@ -33,7 +33,7 @@ export default function MapView({
   const [selectedHazard, setSelectedHazard] = useState(null);
   const [readinessGeoJSON, setLocalReadiness] = useState(null);
   const activePanelRef = useRef(activePanel);
-
+  const highlightedRef = useRef(null);
   // Map loading and layer initialization
   useEffect(() => {
     if (mapRef.current) return;
@@ -96,30 +96,46 @@ export default function MapView({
   useEffect(() => {
     if (!zoomCell?.cell || !mapRef.current || !readinessGeoJSON) return;
 
+    const map = mapRef.current;
+
     const feature = readinessGeoJSON.features.find(
       f =>
         f.properties.cell_id === zoomCell.cell ||
         f.properties.name === zoomCell.cell
     );
 
-    if (!feature || !feature.geometry) return;
+    if (!feature) return;
 
-    try {
-      const coords = feature.geometry.coordinates[0];
+    const id = feature.properties.name;
 
-      const bounds = coords.reduce(
-        (b, coord) => b.extend(coord),
-        new maplibregl.LngLatBounds(coords[0], coords[0])
+    // remove previous alert highlight
+    if (highlightedRef.current !== null) {
+      map.setFeatureState(
+        { source: "readiness", id: highlightedRef.current },
+        { alert: false }
       );
-
-      mapRef.current.fitBounds(bounds, {
-        padding: 60,
-        duration: 800
-      });
-
-    } catch (err) {
-      console.error("Zoom cell fitBounds failed:", err);
     }
+
+    highlightedRef.current = id;
+
+    // set alert highlight
+    map.setFeatureState(
+      { source: "readiness", id },
+      { alert: true }
+    );
+
+    // existing zoom
+    const coords = feature.geometry.coordinates[0];
+    const bounds = coords.reduce(
+      (b, coord) => b.extend(coord),
+      new maplibregl.LngLatBounds(coords[0], coords[0])
+    );
+
+    map.fitBounds(bounds, {
+      padding: 60,
+      duration: 800
+    });
+
   }, [zoomCell]);
 
   const originMarkerRef = useRef(null);
@@ -519,20 +535,28 @@ function addReadinessLayer(map, geojson, onCellHover) {
     paint: {
       "line-color": [
         "case",
+        ["boolean", ["feature-state", "alert"], false],
+        "#ff0000",      // alert highlight
         ["boolean", ["feature-state", "hover"], false],
-        "#ffffff",   // highlighted border
+        "#ffffff",      // hover highlight
         "#000000"
       ],
+
       "line-width": [
         "case",
+        ["boolean", ["feature-state", "alert"], false],
+        6,
         ["boolean", ["feature-state", "hover"], false],
-        5,    // thicker when hover
+        5,
         0.5
       ],
+
       "line-opacity": [
         "case",
+        ["boolean", ["feature-state", "alert"], false],
+        0.9,
         ["boolean", ["feature-state", "hover"], false],
-        0.9,   
+        0.9,
         0.4
       ]
     }
