@@ -190,7 +190,7 @@ export default function App() {
 
   useEffect(() => {
     async function loadShelters() {
-      const geojson = await shelterCSVToGeoJSON("../public/pj_shelters.csv");
+      const geojson = await shelterCSVToGeoJSON("./pj_shelters.csv");
       setShelters(geojson.features);
     }
 
@@ -242,7 +242,7 @@ export default function App() {
           {/* Floating Report Button */}
           <button
             onClick={() => setReportOpen(true)}
-            className="absolute bottom-9 right-2 bg-red-600 text-white px-4 py-3 rounded-full shadow-lg hover:bg-red-700 transition z-40"
+            className="absolute bottom-12 md:bottom-9 right-2 bg-red-600 text-white px-4 py-3 rounded-full shadow-lg hover:bg-red-700 transition z-40"
           >
             Report Hazard
           </button>
@@ -458,8 +458,10 @@ export default function App() {
             });
           }}
         >
-          <div className="bg-red-100 border border-red-200 rounded-xl shadow-xl p-4 space-y-2">
-
+          <div className="fixed md:static top-15 right-2 md:top-auto md:right-auto 
+            transform transition-transform duration-1000
+            translate-y-0 md:translate-x-0
+            bg-red-100 border border-red-200 rounded-xl shadow-xl p-4 md:space-y-2 z-50">
             {/* Header */}
             <div className="flex justify-between items-center">
 

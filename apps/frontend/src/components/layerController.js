@@ -41,25 +41,33 @@ export function updateLayerVisibility(map, layers) {
 
   /* Readiness */
 
-  const readinessVisible =
-    layers.highReadiness ||
-    layers.mediumReadiness ||
-    layers.lowReadiness;
+  const filters = [];
 
-  if (map.getLayer("readiness-layer")) {
-    map.setLayoutProperty(
-      "readiness-layer",
-      "visibility",
-      readinessVisible ? "visible" : "none"
-    );
+  if (layers.lowReadiness) {
+    filters.push(["<", ["get", "score"], 40]);
   }
 
-  if (map.getLayer("readiness-border")) {
-    map.setLayoutProperty(
-      "readiness-border",
-      "visibility",
-      readinessVisible ? "visible" : "none"
-    );
+  if (layers.mediumReadiness) {
+    filters.push([
+      "all",
+      [">=", ["get", "score"], 40],
+      ["<=", ["get", "score"], 69],
+    ]);
+  }
+
+  if (layers.highReadiness) {
+    filters.push([">=", ["get", "score"], 70]);
+  }
+
+  if (filters.length === 0) {
+    map.setLayoutProperty("readiness-layer", "visibility", "none");
+    map.setLayoutProperty("readiness-border", "visibility", "none");
+  } else {
+    map.setLayoutProperty("readiness-layer", "visibility", "visible");
+    map.setLayoutProperty("readiness-border", "visibility", "visible");
+
+    map.setFilter("readiness-layer", ["any", ...filters]);
+    map.setFilter("readiness-border", ["any", ...filters]);
   }
 
 

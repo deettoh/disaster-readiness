@@ -37,21 +37,16 @@ export function hazardsToGeoJSON(apiResponse) {
  * @param {*} readinessKey 
  * @returns 
  */
-export function mergeReadinessIntoGeoJSON(
-  geojson,
-  readinessItems
-) {
-  if (!geojson?.features || !Array.isArray(readinessItems)) {
-    return geojson;
-  }
+// bug 
+export function mergeReadinessIntoGeoJSON(geojson, readinessItems) {
+  if (!geojson?.features || !Array.isArray(readinessItems)) return geojson;
 
   const readinessMap = new Map();
-
-  readinessItems.forEach(item => {
-    readinessMap.set(item.cell_id, item);
-  });
+  readinessItems.forEach(item => readinessMap.set(item.cell_id, item));
 
   geojson.features.forEach(feature => {
+    const cellId = feature.properties.cell_id?.trim();
+    const data = readinessMap.get(cellId);
 
     const polygonName =
       feature.properties.name?.trim();

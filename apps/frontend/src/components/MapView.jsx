@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { use, useEffect, useRef, useState } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { MAPTILER_KEY } from "../api/config";
@@ -7,6 +7,7 @@ import { mergeReadinessIntoGeoJSON } from "../utils/geojson";
 import { shelterCSVToGeoJSON } from "../utils/geojson";
 import LegendPanel from "./LegendPanel";
 import { updateLayerVisibility } from "./layerController";
+import * as turf from "@turf/turf";
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -32,7 +33,7 @@ export default function MapView({
   const [selectedHazard, setSelectedHazard] = useState(null);
   const [readinessGeoJSON, setLocalReadiness] = useState(null);
   const activePanelRef = useRef(activePanel);
-
+  const highlightedRef = useRef(null);
   // Map loading and layer initialization
   useEffect(() => {
     if (mapRef.current) return;
@@ -54,10 +55,14 @@ export default function MapView({
 
         const readinessGeoJSON = await loadReadiness();
 
-        setLocalReadiness(readinessGeoJSON); 
+        setLocalReadiness(readinessGeoJSON);
         setReadinessGeoJSON?.(readinessGeoJSON);
-
-        addReadinessLayer(map, readinessGeoJSON, onCellHover);
+        console.log("Readiness features sent to map:", readinessGeoJSON.features.length);
+        if (map.getSource("readiness")) {
+          map.getSource("readiness").setData(readinessGeoJSON);
+        } else {
+          addReadinessLayer(map, readinessGeoJSON, onCellHover);
+        }
 
         const hazardGeoJSON = await loadHazards();
 
@@ -91,31 +96,68 @@ export default function MapView({
   useEffect(() => {
     if (!zoomCell?.cell || !mapRef.current || !readinessGeoJSON) return;
 
+    const map = mapRef.current;
+
     const feature = readinessGeoJSON.features.find(
       f =>
         f.properties.cell_id === zoomCell.cell ||
         f.properties.name === zoomCell.cell
     );
 
-    if (!feature || !feature.geometry) return;
+    if (!feature) return;
 
-    try {
-      const coords = feature.geometry.coordinates[0];
+    const id = feature.properties.name;
 
-      const bounds = coords.reduce(
-        (b, coord) => b.extend(coord),
-        new maplibregl.LngLatBounds(coords[0], coords[0])
+    // remove previous alert highlight
+    if (highlightedRef.current !== null) {
+      map.setFeatureState(
+        { source: "readiness", id: highlightedRef.current },
+        { alert: false }
       );
-
-      mapRef.current.fitBounds(bounds, {
-        padding: 60,
-        duration: 800
-      });
-
-    } catch (err) {
-      console.error("Zoom cell fitBounds failed:", err);
     }
+
+    highlightedRef.current = id;
+
+    // set alert highlight
+    map.setFeatureState(
+      { source: "readiness", id },
+      { alert: true }
+    );
+
+    // existing zoom
+    const coords = feature.geometry.coordinates[0];
+    const bounds = coords.reduce(
+      (b, coord) => b.extend(coord),
+      new maplibregl.LngLatBounds(coords[0], coords[0])
+    );
+
+    map.fitBounds(bounds, {
+      padding: 60,
+      duration: 800
+    });
+
   }, [zoomCell]);
+  // Clear alert highlight on mouse click
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    const clearAlert = () => {
+      if (highlightedRef.current !== null) {
+        map.setFeatureState(
+          { source: "readiness", id: highlightedRef.current },
+          { alert: false }
+        );
+        highlightedRef.current = null;
+      }
+    };
+
+    map.on("click", clearAlert);
+
+    return () => {
+      map.off("click", clearAlert);
+    };
+  }, []);
 
   const originMarkerRef = useRef(null);
 
@@ -313,8 +355,12 @@ async function loadHazards() {
   return hazardsToGeoJSON(data);
 }
 
+/**
+ * Loads neighbourhood polygons and merges with backend readiness data
+ * @returns 
+ */
 async function loadReadiness() {
-  // Load neighbourhood polygons first
+  // Load neighbourhood polygons
   const res = await fetch("/pj_neighbourhood.geojson");
   const raw = await res.json();
 
@@ -329,34 +375,69 @@ async function loadReadiness() {
     ),
   };
 
+  // Filter by admin_level == 10
+  let filteredFeatures = geojson.features.filter((f) => {
+    const level = Number(f.properties.admin_level);
+    return !isNaN(level) && level == 10;
+  });
+
+  // Flatten MultiPolygons so each polygon piece has the same properties
+  filteredFeatures = filteredFeatures.flatMap((f) => {
+    if (f.geometry.type === "MultiPolygon") {
+      return turf.flatten(f).features.map((piece) => {
+        piece.properties = { ...f.properties }; // preserve the original props
+        return piece;
+      });
+    }
+    return f;
+  });
+
+  geojson.features = filteredFeatures;
+
+  // Add mock readiness data if needed
   if (USE_MOCK) {
-
     geojson.features.forEach((feature) => {
-
       const score = Number((Math.random() * 100).toFixed(1));
-
       feature.properties.score = score;
-
       feature.properties.breakdown = {
         hazard_penalty: Math.random() * 50,
         vulnerability_penalty: Math.random() * 30,
         accessibility_bonus: Math.random() * 20,
         confidence_bonus: Math.random() * 10,
       };
-
       feature.properties.updated_at = new Date().toISOString();
-
     });
-
     return geojson;
   }
 
-  // When backend ready
+  // Backend readiness data
   const apiRes = await fetch(`${API_BASE_URL}/readiness`);
   const readinessData = await apiRes.json();
 
-  return mergeReadinessIntoGeoJSON(geojson, readinessData.items);
+  // Merge backend data by cell_id
+  const readinessMap = new Map();
+  readinessData.items.forEach((item) => {
+    readinessMap.set(item.cell_id, item);
+  });
+
+  geojson.features.forEach((feature) => {
+    const cellId = feature.properties.name?.trim();
+    const readiness = readinessMap.get(cellId);
+
+    feature.properties.score = readiness?.score ?? 0;
+    feature.properties.breakdown = readiness?.breakdown ?? {
+      baseline_vulnerability: 0,
+      recent_hazards: 0,
+      accessibility: 0,
+      coverage_confidence: 0,
+    };
+    feature.properties.updated_at = readiness?.updated_at ?? null;
+  });
+
+  return geojson;
 }
+
+
 
 /*
  * LAYERS
@@ -443,9 +524,15 @@ function addHazardLayer(map, geojson, onHazardClick) {
 }
 
 function addReadinessLayer(map, geojson, onCellHover) {
+  if (map.getSource("readiness")) {
+    map.getSource("readiness").setData(geojson);
+    return;
+  }
+
   map.addSource("readiness", {
     type: "geojson",
     data: geojson,
+    promoteId: "name"
   });
 
   map.addLayer({
@@ -457,48 +544,93 @@ function addReadinessLayer(map, geojson, onCellHover) {
         "interpolate",
         ["linear"],
         ["get", "score"],
-        0,  "#b91c1c",
+        0, "#b91c1c",
         25, "#ef4444",
         50, "#facc15",
         75, "#86efac",
-        100,"#166534"
+        100, "#166534",
       ],
       "fill-opacity": [
         "interpolate",
         ["linear"],
         ["get", "score"],
         0, 0.35,
-        100, 0.65
-      ]
-    }
+        100, 0.65,
+      ],
+    },
   });
 
-  // Map subsection's border
   map.addLayer({
     id: "readiness-border",
     type: "line",
     source: "readiness",
     paint: {
-      "line-color": "#000000",
-      "line-width": 1,
-      "line-opacity": 0.1
+      "line-color": [
+        "case",
+        ["boolean", ["feature-state", "alert"], false],
+        "#ff0000",      // alert highlight
+        ["boolean", ["feature-state", "hover"], false],
+        "#ffffff",      // hover highlight
+        "#000000"
+      ],
+
+      "line-width": [
+        "case",
+        ["boolean", ["feature-state", "alert"], false],
+        6,
+        ["boolean", ["feature-state", "hover"], false],
+        5,
+        0.5
+      ],
+
+      "line-opacity": [
+        "case",
+        ["boolean", ["feature-state", "alert"], false],
+        0.9,
+        ["boolean", ["feature-state", "hover"], false],
+        0.9,
+        0.4
+      ]
     }
   });
+  let hoveredId = null;
   map.on("mousemove", "readiness-layer", (e) => {
 
-  if (!e.features?.length) {
+    if (!e.features?.length) return;
+
+    const feature = e.features[0];
+    const id = feature.id;
+
+    if (hoveredId !== null) {
+      map.setFeatureState(
+        { source: "readiness", id: hoveredId },
+        { hover: false }
+      );
+    }
+
+    hoveredId = id;
+
+    map.setFeatureState(
+      { source: "readiness", id: hoveredId },
+      { hover: true }
+    );
+
+    onCellHover?.(feature);
+
+  });
+
+  map.on("mouseleave", "readiness-layer", () => {
+    if (hoveredId !== null) {
+      map.setFeatureState(
+        { source: "readiness", id: hoveredId },
+        { hover: false }
+      );
+    }
+
+    hoveredId = null;
+
     onCellHover?.(null);
-    return;
-  }
-
-  onCellHover?.(e.features[0]);
-
-});
-
-// Reset when mouse leaves polygon
-map.on("mouseleave", "readiness-layer", () => {
-  onCellHover?.(null);
-});
+  });
 }
 
 async function addShelterLayer(map) {

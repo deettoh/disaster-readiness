@@ -8,6 +8,7 @@ export default function ReportModal({ open, onClose }) {
 
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  const [consentGiven, setConsentGiven] = useState(false);
 
   const [location, setLocation] = useState(null);
   const [detectingLocation, setDetectingLocation] = useState(false);
@@ -135,6 +136,7 @@ export default function ReportModal({ open, onClose }) {
   function renderPhotoStage() {
     return (
       <>
+        {/* Upload Box */}
         <div className="border-2 border-dashed rounded-lg p-6 text-center text-sm text-gray-500">
 
           {!imagePreview ? (
@@ -169,6 +171,22 @@ export default function ReportModal({ open, onClose }) {
 
         </div>
 
+        {/* Consent Text with Checkbox */}
+        <div className="mb-4 text-xs text-gray-600 flex items-start gap-2">
+          <input
+            type="checkbox"
+            checked={consentGiven}
+            onChange={(e) => setConsentGiven(e.target.checked)}
+            className="mt-1"
+          />
+          <p>
+            I hereby consent to the use of this photo for disaster reporting and
+            related research purposes only. I confirm that the image does not contain
+            any sensitive personal information.
+          </p>
+        </div>
+
+        {/* Action Buttons */}
         <div className="flex justify-end gap-2 pt-2">
           <button
             onClick={onClose}
@@ -178,10 +196,10 @@ export default function ReportModal({ open, onClose }) {
           </button>
 
           <button
-            disabled={!imageFile}
+            disabled={!imageFile || !consentGiven}
             onClick={() => setStage(2)}
             className={`px-4 py-2 text-sm rounded-lg text-white ${
-              imageFile
+              imageFile && consentGiven
                 ? "bg-red-600 hover:bg-red-700"
                 : "bg-gray-400 cursor-not-allowed"
             }`}
@@ -318,7 +336,7 @@ async function handleSubmit() {
 
     // ---- Step 1: Create report metadata ----
     const createResponse = await fetch(
-      "http://localhost:8000/reports",
+      `${API_BASE_URL}/reports`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -343,7 +361,7 @@ async function handleSubmit() {
     formData.append("image", imageFile);
 
     const uploadResponse = await fetch(
-      `http://localhost:8000/reports/${newReportId}/image`,
+      `${API_BASE_URL}/reports/${newReportId}/image`,
       {
         method: "POST",
         body: formData,
@@ -398,7 +416,7 @@ function resetForm() {
 
               {resultPopup === "success" && (
                 <p className="text-green-600 font-semibold">
-                  Report submitted successfully 🎉
+                  Report submitted successfully 
                 </p>
               )}
 
