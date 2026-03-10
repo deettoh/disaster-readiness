@@ -45,7 +45,7 @@ wandb/
 notebook/.ipynb_checkpoints/
 
 # models
-*.pt
+
 
 # output 
 ai/redaction/outputs/
