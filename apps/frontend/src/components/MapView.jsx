@@ -7,6 +7,7 @@ import { mergeReadinessIntoGeoJSON } from "../utils/geojson";
 import { shelterCSVToGeoJSON } from "../utils/geojson";
 import LegendPanel from "./LegendPanel";
 import { updateLayerVisibility } from "./layerController";
+import * as turf from "@turf/turf";
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -317,9 +318,10 @@ async function loadHazards() {
   return hazardsToGeoJSON(data);
 }
 
-// bug
-import * as turf from "@turf/turf";
-
+/**
+ * Loads neighbourhood polygons and merges with backend readiness data
+ * @returns 
+ */
 async function loadReadiness() {
   // Load neighbourhood polygons
   const res = await fetch("/pj_neighbourhood.geojson");
@@ -473,7 +475,6 @@ function addHazardLayer(map, geojson, onHazardClick) {
 
 }
 
-//bug
 function addReadinessLayer(map, geojson, onCellHover) {
   if (map.getSource("readiness")) {
     map.getSource("readiness").setData(geojson);
@@ -483,6 +484,7 @@ function addReadinessLayer(map, geojson, onCellHover) {
   map.addSource("readiness", {
     type: "geojson",
     data: geojson,
+    promoteId: "name"
   });
 
   map.addLayer({
@@ -515,21 +517,62 @@ function addReadinessLayer(map, geojson, onCellHover) {
     type: "line",
     source: "readiness",
     paint: {
-      "line-color": "#000000",
-      "line-width": 1,
-      "line-opacity": 0.1,
-    },
-  });
-
-  map.on("mousemove", "readiness-layer", (e) => {
-    if (!e.features?.length) {
-      onCellHover?.(null);
-      return;
+      "line-color": [
+        "case",
+        ["boolean", ["feature-state", "hover"], false],
+        "#ffffff",   // highlighted border
+        "#000000"
+      ],
+      "line-width": [
+        "case",
+        ["boolean", ["feature-state", "hover"], false],
+        5,    // thicker when hover
+        0.5
+      ],
+      "line-opacity": [
+        "case",
+        ["boolean", ["feature-state", "hover"], false],
+        0.9,   
+        0.4
+      ]
     }
-    onCellHover?.(e.features[0]);
+  });
+  let hoveredId = null;
+  map.on("mousemove", "readiness-layer", (e) => {
+
+    if (!e.features?.length) return;
+
+    const feature = e.features[0];
+    const id = feature.id;
+
+    if (hoveredId !== null) {
+      map.setFeatureState(
+        { source: "readiness", id: hoveredId },
+        { hover: false }
+      );
+    }
+
+    hoveredId = id;
+
+    map.setFeatureState(
+      { source: "readiness", id: hoveredId },
+      { hover: true }
+    );
+
+    onCellHover?.(feature);
+
   });
 
   map.on("mouseleave", "readiness-layer", () => {
+    if (hoveredId !== null) {
+      map.setFeatureState(
+        { source: "readiness", id: hoveredId },
+        { hover: false }
+      );
+    }
+
+    hoveredId = null;
+
     onCellHover?.(null);
   });
 }
