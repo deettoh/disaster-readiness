@@ -36,6 +36,12 @@
 
 	 # 4. Compute accessibility metrics
 	 poetry run python routing/scripts/run_accessibility.py
+
+	 # 5. Run risk imputation model (Baseline Vulnerability)
+	 poetry run python ai/imputation/scripts/run_imputation.py --write-db
+
+	 # 6. Initialize readiness scores (Initial Readiness)
+	 poetry run python supabase/scripts/initialize_readiness.py
 	 ```
 
 ### Note on Seeding:
