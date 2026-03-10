@@ -137,6 +137,27 @@ export default function MapView({
     });
 
   }, [zoomCell]);
+  // Clear alert highlight on mouse click
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    const clearAlert = () => {
+      if (highlightedRef.current !== null) {
+        map.setFeatureState(
+          { source: "readiness", id: highlightedRef.current },
+          { alert: false }
+        );
+        highlightedRef.current = null;
+      }
+    };
+
+    map.on("click", clearAlert);
+
+    return () => {
+      map.off("click", clearAlert);
+    };
+  }, []);
 
   const originMarkerRef = useRef(null);
 
