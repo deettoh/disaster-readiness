@@ -53,6 +53,9 @@ class Settings(BaseSettings):
     routing_backend: Literal["mock", "sql"] = "mock"
     routing_algorithm: Literal["dijkstra", "astar"] = "dijkstra"
     weather_backend: Literal["mock", "live"] = "mock"
+    readiness_alert_threshold: float = 40.0
+    road_penalty_radius_m: float = 500.0
+    road_penalty_weight: float = 50.0
 
     model_config = SettingsConfigDict(
         env_file=".env",
