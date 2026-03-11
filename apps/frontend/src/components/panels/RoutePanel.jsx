@@ -39,15 +39,17 @@ export default function RoutePanel({
       alert("Click on the map to select a start location.");
       return;
     }
-
+    const shelter = shelters.find(
+      s => s.properties.shelter_id === selectedShelter
+    );
+    const [destLng, destLat] = shelter.geometry.coordinates;
     const params = {
       origin_lat: origin[1],
-      origin_lng: origin[0]
+      origin_lng: origin[0],
+      dest_lat: destLat,
+      dest_lng: destLng,
+      shelter_id: selectedShelter
     };
-
-    if (selectedShelter) {
-      params.shelter_id = selectedShelter;
-    }
 
     try {
       const data = await getRoute(params);
