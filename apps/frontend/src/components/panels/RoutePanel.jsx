@@ -39,17 +39,29 @@ export default function RoutePanel({
       alert("Click on the map to select a start location.");
       return;
     }
-    const shelter = shelters.find(
-      s => s.properties.shelter_id === selectedShelter
-    );
-    const [destLng, destLat] = shelter.geometry.coordinates;
+
+    if (!selectedShelter) {
+      alert("Please select a shelter destination.");
+      return;
+    }
+
     const params = {
       origin_lat: origin[1],
-      origin_lng: origin[0],
-      dest_lat: destLat,
-      dest_lng: destLng,
-      shelter_id: selectedShelter
+      origin_lng: origin[0]
     };
+
+    if (selectedShelter) {
+      params.shelter_id = selectedShelter;
+
+      const shelter = shelters.find(
+        (s) => s.properties?.shelter_id === selectedShelter
+      );
+      if (shelter?.geometry?.coordinates) {
+        const [lng, lat] = shelter.geometry.coordinates;
+        params.destination_lat = lat;
+        params.destination_lng = lng;
+      }
+    }
 
     try {
       const data = await getRoute(params);
