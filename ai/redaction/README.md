@@ -61,7 +61,7 @@ Batch size: 8
 Epochs: 100  
 Device: Apple MPS
 
-Best validation performance:
+## Performance:
 
 - mAP50: 0.83
 - mAP50-95: 0.56

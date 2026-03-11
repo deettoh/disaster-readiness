@@ -48,7 +48,7 @@ notebook/.ipynb_checkpoints/
 
 
 # output 
-ai/redaction/outputs/
+ai/redaction/artifacts/
 data/external/*
 !data/external/.gitkeep
 data/processed/*
