@@ -414,27 +414,7 @@ async function loadReadiness() {
   const apiRes = await fetch(`${API_BASE_URL}/readiness`);
   const readinessData = await apiRes.json();
 
-  // Merge backend data by cell_id
-  const readinessMap = new Map();
-  readinessData.items.forEach((item) => {
-    readinessMap.set(item.cell_id, item);
-  });
-
-  geojson.features.forEach((feature) => {
-    const cellId = feature.properties.name?.trim();
-    const readiness = readinessMap.get(cellId);
-
-    feature.properties.score = readiness?.score ?? 0;
-    feature.properties.breakdown = readiness?.breakdown ?? {
-      baseline_vulnerability: 0,
-      recent_hazards: 0,
-      accessibility: 0,
-      coverage_confidence: 0,
-    };
-    feature.properties.updated_at = readiness?.updated_at ?? null;
-  });
-
-  return geojson;
+  return mergeReadinessIntoGeoJSON(geojson, readinessData.items);
 }
 
 
