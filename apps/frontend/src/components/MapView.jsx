@@ -362,7 +362,18 @@ async function loadHazards() {
 async function loadReadiness() {
   // Load neighbourhood polygons
   const res = await fetch("/pj_neighbourhood.geojson");
-  const geojson = await res.json();
+  const raw = await res.json();
+
+  // Keep only admin level 10 neighbourhood polygons (exclude OSM Point
+  // nodes and higher level boundaries).
+  const geojson = {
+    ...raw,
+    features: raw.features.filter(
+      (f) =>
+        (f.geometry.type === "Polygon" || f.geometry.type === "MultiPolygon") &&
+        f.properties.admin_level === "10"
+    ),
+  };
 
   // Filter by admin_level == 10
   let filteredFeatures = geojson.features.filter((f) => {
@@ -389,10 +400,10 @@ async function loadReadiness() {
       const score = Number((Math.random() * 100).toFixed(1));
       feature.properties.score = score;
       feature.properties.breakdown = {
-        baseline_vulnerability: Math.random(),
-        recent_hazards: Math.random(),
-        accessibility: Math.random(),
-        coverage_confidence: Math.random(),
+        hazard_penalty: Math.random() * 50,
+        vulnerability_penalty: Math.random() * 30,
+        accessibility_bonus: Math.random() * 20,
+        confidence_bonus: Math.random() * 10,
       };
       feature.properties.updated_at = new Date().toISOString();
     });
@@ -403,27 +414,7 @@ async function loadReadiness() {
   const apiRes = await fetch(`${API_BASE_URL}/readiness`);
   const readinessData = await apiRes.json();
 
-  // Merge backend data by cell_id
-  const readinessMap = new Map();
-  readinessData.items.forEach((item) => {
-    readinessMap.set(item.cell_id, item);
-  });
-
-  geojson.features.forEach((feature) => {
-    const cellId = feature.properties.name?.trim();
-    const readiness = readinessMap.get(cellId);
-
-    feature.properties.score = readiness?.score ?? 0;
-    feature.properties.breakdown = readiness?.breakdown ?? {
-      baseline_vulnerability: 0,
-      recent_hazards: 0,
-      accessibility: 0,
-      coverage_confidence: 0,
-    };
-    feature.properties.updated_at = readiness?.updated_at ?? null;
-  });
-
-  return geojson;
+  return mergeReadinessIntoGeoJSON(geojson, readinessData.items);
 }
 
 

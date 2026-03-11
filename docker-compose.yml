@@ -20,6 +20,8 @@ services:
       context: .
       dockerfile: apps/api/Dockerfile
     container_name: disaster-api
+    env_file:
+      - .env
     environment:
       APP_ENV: local
       API_PREFIX: /api/v1
@@ -40,12 +42,18 @@ services:
       context: .
       dockerfile: apps/worker/Dockerfile
     container_name: disaster-worker
+    env_file:
+      - .env
     environment:
       REDIS_URL: redis://redis:6379/0
       QUEUE_NAME: image-processing
       WORKER_API_BASE_URL: http://api:8000/api/v1
       DATABASE_URL: ${DATABASE_URL}
       WORKER_REDACTED_OUTPUT_DIR: /app/data/processed/redacted
+      DATA_BACKEND: ${DATA_BACKEND}
+      ROUTING_BACKEND: ${ROUTING_BACKEND}
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_SECRET_KEY: ${SUPABASE_SECRET_KEY}
     depends_on:
       redis:
         condition: service_healthy

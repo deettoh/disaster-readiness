@@ -14,4 +14,4 @@ class GridCell(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     cell_id: Mapped[str | None] = mapped_column(Text, nullable=True)
-
+    neighborhood: Mapped[str | None] = mapped_column(Text, nullable=True)

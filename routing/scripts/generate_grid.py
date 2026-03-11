@@ -54,13 +54,15 @@ def run_grid_generation():
     boundary = gpd.read_file(boundary_path)
     all_features_gdf = gpd.read_file(neighbourhood_path)
 
-    # Filter for specific neighborhoods (admin_level > 7)
+    # Filter for specific neighborhoods (admin_level == 10)
     # This avoids tagging everything as the city-wide "Petaling Jaya" polygon
     print("Filtering and processing neighborhood features...")
     neighbourhoods_gdf = all_features_gdf[
-        (all_features_gdf["admin_level"].fillna("10").astype(int) > 7)
+        (all_features_gdf["admin_level"].fillna("10").astype(int) == 10)
         & (all_features_gdf["name"].notna())
     ].copy()
+
+    neighbourhoods_gdf["name"] = neighbourhoods_gdf["name"].str.strip()
 
     # Project to Malaysia-specific metric CRS (EPSG:3168) for accurate 500m math
     boundary = boundary.to_crs(epsg=3168)
@@ -88,7 +90,6 @@ def run_grid_generation():
     grid_pj = gpd.clip(grid, boundary)
 
     print("Performing spatial join with neighborhoods...")
-    # sjoin helps us find which specific neighborhood each grid cell intersects with
     grid_pj = gpd.sjoin(
         grid_pj,
         neighbourhoods_gdf[["name", "geometry"]],
@@ -96,8 +97,51 @@ def run_grid_generation():
         predicate="intersects",
     )
 
-    # Resolve duplicates (cells matching multiple neighborhoods) by taking the first match
+    # Resolve cells matching multiple neighborhoods
     grid_pj = grid_pj.groupby(grid_pj.index).first()
+
+    # Force assign at least one cell for every neighborhood in the source data.
+    print("Verifying 100% neighborhood coverage...")
+    all_names = set(neighbourhoods_gdf["name"].unique())
+    assigned_names = set(grid_pj["name"].dropna().unique())
+    missing_names = all_names - assigned_names
+
+    if missing_names:
+        print(
+            f"  Found {len(missing_names)} missing neighborhoods. Forcing assignment..."
+        )
+        # Project grid to same CRS for matching
+        grid_metric = gpd.GeoDataFrame(grid_pj, geometry="geometry", crs=3168)
+
+        # Already assigned cells during the forced overlap
+        assigned_cells = set()
+
+        for name in missing_names:
+            poly = neighbourhoods_gdf[neighbourhoods_gdf["name"] == name].geometry.iloc[
+                0
+            ]
+            matches = grid_metric[grid_metric.geometry.intersects(poly)]
+
+            unassigned_matches = matches[~matches.index.isin(assigned_cells)]
+            if not unassigned_matches.empty:
+                matches = unassigned_matches
+
+            if not matches.empty:
+                best_match_idx = None
+                max_area = -1
+                for idx, row in matches.iterrows():
+                    area = row.geometry.intersection(poly).area
+                    if area > max_area:
+                        max_area = area
+                        best_match_idx = idx
+
+                target_idx = best_match_idx
+                grid_pj.at[target_idx, "name"] = name
+                assigned_cells.add(target_idx)
+                print(f"    Forcing Cell {target_idx} -> '{name}'")
+            else:
+                print(f"    Warning: No grid cells found for '{name}'")
+
     # Explicitly restore GeoDataFrame with CRS
     grid_pj = gpd.GeoDataFrame(grid_pj, geometry="geometry", crs=3168)
 
@@ -105,7 +149,6 @@ def run_grid_generation():
     grid_pj = grid_pj.to_crs(epsg=4326)
     grid_pj.index.name = "id"
 
-    # Clean up column names to match database schema
     grid_pj = grid_pj.rename(columns={"name": "neighborhood"})
     grid_pj["neighborhood"] = grid_pj["neighborhood"].fillna(
         "Petaling Jaya (Unclassified)"
@@ -120,7 +163,6 @@ def run_grid_generation():
         conn.execute(text("TRUNCATE TABLE public.neighborhoods CASCADE;"))
         conn.commit()
 
-    # Rename geometry column to match schema-defined 'geom'
     grid_pj = grid_pj.rename_geometry("geom")
 
     print(f"Uploading {len(grid_pj)} grid cells...")

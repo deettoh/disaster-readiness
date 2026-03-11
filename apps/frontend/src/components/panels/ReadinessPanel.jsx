@@ -1,6 +1,17 @@
 import { useMemo } from "react";
 
 /**
+ * Canonical breakdown items to display, in fixed order.
+ * Keys must match the SQL readiness engine output.
+ */
+const BREAKDOWN_DISPLAY = [
+  { key: "hazard_penalty",          label: "Hazard Penalty",          type: "penalty" },
+  { key: "vulnerability_penalty",   label: "Vulnerability Penalty",   type: "penalty" },
+  { key: "accessibility_bonus",     label: "Accessibility Bonus",     type: "bonus"   },
+  { key: "confidence_bonus",        label: "Confidence Bonus",        type: "bonus"   },
+];
+
+/**
  * ReadinessPanel component shows detailed information about the hovered cell's readiness score and breakdown, as well as an overall summary of readiness across all cells. It updates dynamically based on the hovered cell and the readiness GeoJSON data.
  * @param {*} param0 
  * @returns 
@@ -75,23 +86,29 @@ export default function ReadinessPanel({
             {/* Breakdown */}
             {breakdown && (
               <div className="space-y-3 pt-2">
-                {Object.entries(breakdown).map(([key, value]) => (
-                  <div key={key}>
-                    <div className="flex justify-between text-xs mb-1">
-                      <span className="capitalize">
-                        {key.replace(/_/g, " ")}
-                      </span>
-                      <span>{(value * 100).toFixed(0)}%</span>
-                    </div>
+                {BREAKDOWN_DISPLAY.map(({ key, label, type }) => {
+                  const value = Number(breakdown[key] ?? 0);
+                  return (
+                    <div key={key}>
+                      <div className="flex justify-between text-xs mb-1">
+                        <span>{label}</span>
+                        <span className="font-medium">
+                          {type === "penalty" ? "-" : "+"}
+                          {value.toFixed(1)} pts
+                        </span>
+                      </div>
 
-                    <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-blue-500 transition-all duration-300"
-                        style={{ width: `${value * 100}%` }}
-                      />
+                      <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full transition-all duration-300 ${
+                            type === "penalty" ? "bg-red-400" : "bg-emerald-500"
+                          }`}
+                          style={{ width: `${Math.min(100, Math.abs(value))}%` }}
+                        />
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
 
