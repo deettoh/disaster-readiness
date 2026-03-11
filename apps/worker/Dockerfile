@@ -7,6 +7,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     POETRY_VERSION=2.3.1 \
     POETRY_VIRTUALENVS_CREATE=false \
+    PYTHON_KEYRING_BACKEND=keyring.backends.null.Keyring \
     PYTHONPATH=/app/apps/worker/src:/app/ai/classification/src \
     REDIS_URL=redis://redis:6379/0 \
     QUEUE_NAME=image-processing \
