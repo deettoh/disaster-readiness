@@ -62,6 +62,8 @@ def run_grid_generation():
         & (all_features_gdf["name"].notna())
     ].copy()
 
+    neighbourhoods_gdf["name"] = neighbourhoods_gdf["name"].str.strip()
+
     # Project to Malaysia-specific metric CRS (EPSG:3168) for accurate 500m math
     boundary = boundary.to_crs(epsg=3168)
     neighbourhoods_gdf = neighbourhoods_gdf.to_crs(epsg=3168)
@@ -111,14 +113,31 @@ def run_grid_generation():
         # Project grid to same CRS for matching
         grid_metric = gpd.GeoDataFrame(grid_pj, geometry="geometry", crs=3168)
 
+        # Already assigned cells during the forced overlap
+        assigned_cells = set()
+
         for name in missing_names:
             poly = neighbourhoods_gdf[neighbourhoods_gdf["name"] == name].geometry.iloc[
                 0
             ]
             matches = grid_metric[grid_metric.geometry.intersects(poly)]
+
+            unassigned_matches = matches[~matches.index.isin(assigned_cells)]
+            if not unassigned_matches.empty:
+                matches = unassigned_matches
+
             if not matches.empty:
-                target_idx = matches.index[0]
+                best_match_idx = None
+                max_area = -1
+                for idx, row in matches.iterrows():
+                    area = row.geometry.intersection(poly).area
+                    if area > max_area:
+                        max_area = area
+                        best_match_idx = idx
+
+                target_idx = best_match_idx
                 grid_pj.at[target_idx, "name"] = name
+                assigned_cells.add(target_idx)
                 print(f"    Forcing Cell {target_idx} -> '{name}'")
             else:
                 print(f"    Warning: No grid cells found for '{name}'")
