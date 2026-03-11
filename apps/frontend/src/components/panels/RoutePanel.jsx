@@ -45,9 +45,7 @@ export default function RoutePanel({
       origin_lng: origin[0]
     };
 
-    if (useNearest) {
-      params.shelter_id = "nearest";
-    } else if (selectedShelter) {
+    if (selectedShelter) {
       params.shelter_id = selectedShelter;
     }
 
