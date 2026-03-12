@@ -55,7 +55,7 @@ async def create_report(
     summary="Upload report image",
     description=(
         "Accept multipart image upload, validate file constraints, and enqueue "
-        "background processing."
+        "in-process background processing."
     ),
 )
 async def upload_report_image(
@@ -66,7 +66,7 @@ async def upload_report_image(
         get_orchestration_service
     ),
 ) -> ReportImageUploadResponse:
-    """Accept an image upload and enqueue mock async processing."""
+    """Accept an image upload and enqueue in-process processing."""
     normalized_content_type = validate_report_image_content_type(
         content_type=image.content_type,
         allowed_content_types=settings.upload_allowed_content_types,
@@ -118,7 +118,7 @@ async def get_report_status(
     "/{report_id}/processing-result",
     response_model=ReportStatusResponse,
     summary="Update report processing result",
-    description="Worker callback stub endpoint for completion/failure updates.",
+    description="Manual processing result update endpoint.",
 )
 async def update_processing_result(
     report_id: UUID,
@@ -127,7 +127,7 @@ async def update_processing_result(
         get_orchestration_service
     ),
 ) -> ReportStatusResponse:
-    """Simulate worker callback and update processing status."""
+    """Update processing status from a manual completion/failure signal."""
     if payload.status == "complete":
         return await orchestration_service.mark_processing_complete(report_id)
     return await orchestration_service.mark_processing_failed(

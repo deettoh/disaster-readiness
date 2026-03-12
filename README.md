@@ -8,10 +8,11 @@
 	 ```bash
 	 cp .env.example .env
 	 ```
-2. Install backend dependencies:
+2. Install backend dependencies (API + image processing):
 	 ```bash
-	 poetry install
+	 poetry install --with api,worker
 	 ```
+   Note: the `worker` group contains image processing dependencies now run inside the API.
 3. Install frontend dependencies:
 	 ```bash
 	 cd apps/frontend && npm install
@@ -53,7 +54,7 @@
 
 ### 2) Run with Docker
 
-- Backend stack (`api`, `worker`, `redis`):
+- Backend stack (`api`):
 	```bash
 	docker compose up --build
 	```
@@ -74,10 +75,6 @@ See full container runbook in [DOCKER.md](DOCKER.md).
 	```bash
 	cd apps/frontend && npm run dev
 	```
-- Optional: start worker (new terminal):
-	```bash
-	poetry run python apps/worker/src/worker/runner.py
-	```
 
 Useful references:
 - [DOCKER.md](DOCKER.md)
@@ -89,7 +86,6 @@ Useful references:
 | --- | --- | --- |
 | `apps/frontend/` | React + Tailwind + MapLibre web app (mobile-first browser UX). Frontend source lives in `apps/frontend/src/`. | Member E (Frontend + UX) |
 | `apps/api/` | FastAPI service, API contracts, validation, and orchestration endpoints. Python package source lives in `apps/api/src/app/`. | Member A (Backend Lead) |
-| `apps/worker/` | Background job worker (Redis + RQ) for async pipelines. Python package source lives in `apps/worker/src/worker/`. | Member A + Member D |
 | `db/migrations/` | SQL migrations for Postgres/PostGIS schema changes. | Member B (Data + Geospatial) |
 | `db/seeds/` | Seed scripts/data for local dev and demo baseline records. | Member B |
 | `db/functions/` | SQL functions/views for readiness, hazard aggregation, and geospatial helpers. | Member B (with C support for routing queries) |
@@ -99,14 +95,14 @@ Useful references:
 | `ai/classification/` | Hazard image classification inference/training assets and model metadata. Python source lives in `ai/classification/src/hazard_classification/`. | Member D (AI + Privacy) |
 | `ai/redaction/` | Face + plate detection and redaction pipeline code/assets. Python source lives in `ai/redaction/src/privacy_redaction/`. | Member D |
 | `ai/imputation/` | Risk/vulnerability imputation model code, features, and artifacts. Python source lives in `ai/imputation/src/risk_imputation/`. | Member D + Member B |
-| `shared/schemas/` | Shared API/data schemas used across frontend/backend/worker. | Member A + Member E |
+| `shared/schemas/` | Shared API/data schemas used across frontend/backend. | Member A + Member E |
 | `shared/types/` | Shared constants/types/contracts for cross-module consistency. | Member A + Member E |
 | `tests/api/` | API-level tests for endpoints, validation, and response contracts. | Member A |
 | `tests/ai/` | Classification/redaction/imputation tests and quality checks. | Member D |
 | `tests/routing/` | Routing query, penalty update, and accessibility metric tests. | Member C |
 | `tests/integration/` | Cross-service integration tests (upload -> AI -> reroute -> readiness -> alerts). | Members A/B/C/D |
 | `tests/e2e/` | End-to-end user flow tests from frontend through backend services. | Member E + Member A |
-| `docker-compose.yml`, `apps/*/Dockerfile` | Local container orchestration and per-service image definitions for API/worker/frontend. | Member A |
+| `docker-compose.yml`, `apps/*/Dockerfile` | Local container orchestration and per-service image definitions for API/frontend. | Member A |
 | `infra/deploy/` | Deployment configs/runbooks for Render/Cloud Run + Vercel/Netlify + Supabase. | Member A + Member E |
 | `docs/architecture/` | Architecture diagrams and technical system design notes. | All members |
 | `docs/api/` | API documentation, payload examples, and integration notes. | Member A |
@@ -122,4 +118,4 @@ Useful references:
 
 - Empty scaffold directories include `.gitkeep` so they are tracked in Git.
 - Poetry is initialized at repository root (`pyproject.toml`, `poetry.lock`, `.venv`).
-- Local container stack runbook is in `DOCKER.md` (`docker-compose.yml` for API/worker/Redis and optional frontend container).
+- Local container stack runbook is in `DOCKER.md` (`docker-compose.yml` for API and optional frontend container).

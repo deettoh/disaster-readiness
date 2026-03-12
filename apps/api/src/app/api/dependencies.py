@@ -33,7 +33,7 @@ from app.services.mocks import (
 )
 from app.services.orchestration import ReportOrchestrationService
 from app.services.post_processing_sql import SQLPostProcessingHooks
-from app.services.queue_backends import RQQueueClient
+from app.services.queue_backends import InProcessQueueClient
 from app.services.routing_sql import SQLRoutingService
 from app.services.weather_service import WeatherService
 
@@ -53,7 +53,7 @@ _post_processing_hooks = MockPostProcessingHooks()
 _sql_post_processing_hooks: SQLPostProcessingHooks | None = None
 _mock_weather_service = MockWeatherService()
 _live_weather_service: WeatherService | None = None
-_rq_queue_client: RQQueueClient | None = None
+_in_process_queue_client: InProcessQueueClient | None = None
 _orchestration_service: ReportOrchestrationService | None = None
 _rate_limiter = InMemoryRateLimiter()
 
@@ -86,16 +86,17 @@ def get_queue_client() -> QueueClient:
     if settings.queue_backend == "mock":
         return _mock_queue_client
 
-    global _rq_queue_client
-    if _rq_queue_client is None:
-        _rq_queue_client = RQQueueClient(
-            redis_url=settings.redis_url,
-            queue_name=settings.queue_name,
-            default_timeout=settings.queue_default_timeout,
-            retry_max=settings.queue_retry_max,
-            retry_intervals=settings.queue_retry_intervals,
+    global _in_process_queue_client
+    if _in_process_queue_client is None:
+        _in_process_queue_client = InProcessQueueClient(
+            status_store=get_report_status_store(),
+            post_processing_hooks=get_post_processing_hooks(),
+            database_url=settings.database_url,
+            supabase_url=settings.supabase_url,
+            supabase_key=settings.supabase_secret_key,
+            model_version=settings.image_processing_model_version,
         )
-    return _rq_queue_client
+    return _in_process_queue_client
 
 
 def get_hazard_service() -> HazardQueryService:
