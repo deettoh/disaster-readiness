@@ -446,7 +446,11 @@ function addHazardLayer(map, geojson, onHazardClick) {
       paint: {
         "circle-radius": 7,
         "circle-color": hazard.color,
-        "circle-opacity": ["get", "confidence"],
+        "circle-opacity": [
+          "max",
+          ["get", "confidence"],
+          0.4
+        ]
       }
     });
 

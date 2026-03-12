@@ -40,15 +40,27 @@ export default function RoutePanel({
       return;
     }
 
+    if (!selectedShelter) {
+      alert("Please select a shelter destination.");
+      return;
+    }
+
     const params = {
       origin_lat: origin[1],
       origin_lng: origin[0]
     };
 
-    if (useNearest) {
-      params.shelter_id = "nearest";
-    } else if (selectedShelter) {
+    if (selectedShelter) {
       params.shelter_id = selectedShelter;
+
+      const shelter = shelters.find(
+        (s) => s.properties?.shelter_id === selectedShelter
+      );
+      if (shelter?.geometry?.coordinates) {
+        const [lng, lat] = shelter.geometry.coordinates;
+        params.destination_lat = lat;
+        params.destination_lng = lng;
+      }
     }
 
     try {
