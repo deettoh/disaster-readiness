@@ -48,7 +48,7 @@ def test_readiness_engine_full_flow(db_engine):
         hour_ago = now - datetime.timedelta(hours=1)
         hour_hence = now + datetime.timedelta(hours=1)
 
-        # Simulate the worker/AI by adding
+        # Simulate the processing/AI by adding
         # a prediction at the cell centroid
         prediction_id = "00000000-0000-0000-0000-000000000002"
         # Ensure dummy prediction doesn't conflict

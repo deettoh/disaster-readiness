@@ -6,7 +6,7 @@ def test_report_upload_and_completion_flow(
     report_id_str,
     valid_image_upload,
 ) -> None:
-    """Uploading an image should enqueue processing and allow completion callback."""
+    """Uploading an image should enqueue processing and allow status updates."""
     upload_response = client.post(
         f"/api/v1/reports/{report_id_str}/image",
         files={"image": valid_image_upload},
