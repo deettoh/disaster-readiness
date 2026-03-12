@@ -16,17 +16,12 @@ from uuid import UUID
 
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
+from sqlalchemy.engine.url import make_url
 from sqlalchemy.exc import SQLAlchemyError
-
-try:
-    from hazard_classification.inference import predict_hazard as _predict_hazard
-except Exception as exc:  # noqa: BLE001
-    _predict_hazard = None
-    _predict_hazard_import_error = exc
-else:
-    _predict_hazard_import_error = None
+from sqlalchemy.pool import NullPool
 
 logger = logging.getLogger(__name__)
+
 
 @dataclass(frozen=True)
 class ClassificationResult:
@@ -53,20 +48,29 @@ def process_report_image(
     report_uuid = UUID(report_id)
     image_bytes = base64.b64decode(image_payload_b64.encode("ascii"))
     image_filename = (filename or "report-image.jpg").strip() or "report-image.jpg"
-    output_dir = _redacted_output_dir()
     database_url = os.getenv("DATABASE_URL", "").strip()
+    supabase_url = os.getenv("SUPABASE_URL", "").strip()
+    supabase_key = os.getenv("SUPABASE_SECRET_KEY", "").strip()
     if not database_url:
         raise RuntimeError("DATABASE_URL must be set for worker persistence")
+    if not supabase_url or not supabase_key:
+        raise RuntimeError(
+            "SUPABASE_URL and SUPABASE_SECRET_KEY must be set for storage"
+        )
     api_base_url = os.getenv("WORKER_API_BASE_URL", "http://localhost:8000/api/v1")
 
     try:
+        logger.info("Starting classification...")
         classification = _classify_image(image_bytes)
-        redacted_image_bytes = _mock_redact(image_bytes)
-        redacted_path = _write_redacted_artifact(
+
+        redacted_image_bytes = _redact_image(image_bytes)
+
+        redacted_path = _write_redacted_artifact_to_supabase(
             report_id=report_uuid,
             filename=image_filename,
             image_bytes=redacted_image_bytes,
-            output_dir=output_dir,
+            supabase_url=supabase_url,
+            supabase_key=supabase_key,
         )
         _persist_worker_outputs(
             report_id=report_uuid,
@@ -105,12 +109,14 @@ def process_report_image(
 
 def _classify_image(image_bytes: bytes) -> ClassificationResult:
     """Run real hazard classification inference and return normalized output."""
-    if _predict_hazard is None:
+    try:
+        from hazard_classification.inference import predict_hazard
+    except Exception as exc:
         raise RuntimeError(
-            "hazard classification inference import failed at worker startup"
-        ) from _predict_hazard_import_error
+            "hazard classification inference import failed at worker execution"
+        ) from exc
 
-    hazard_label, confidence = _predict_hazard(image_bytes)
+    hazard_label, confidence = predict_hazard(image_bytes)
     return ClassificationResult(
         hazard_label=str(hazard_label),
         confidence=float(confidence),
@@ -121,16 +127,35 @@ def _classify_image(image_bytes: bytes) -> ClassificationResult:
     )
 
 
-def _mock_redact(image_bytes: bytes) -> bytes:
-    """Return passthrough bytes as temporary mocked redaction output."""
-    return image_bytes
+def _redact_image(image_bytes: bytes) -> bytes:
+    """Run real privacy redaction pipeline over the image bytes."""
+    try:
+        from privacy_redaction import RedactionPipeline
+    except Exception as exc:
+        raise RuntimeError(
+            "privacy redaction inference import failed at worker execution"
+        ) from exc
 
+    import cv2
+    import numpy as np
 
-def _redacted_output_dir() -> Path:
-    """Return redacted output directory from env with local default."""
-    return Path(
-        os.getenv("WORKER_REDACTED_OUTPUT_DIR", "data/processed/redacted")
-    ).resolve()
+    # Decode bytes to numpy array
+    nparr = np.frombuffer(image_bytes, np.uint8)
+    img_np = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+    if img_np is None:
+        raise ValueError("Could not decode image bytes into CV2 array")
+
+    # Pass down to pipeline
+    redactor = RedactionPipeline()
+    redacted_np = redactor.redact(img_np)
+
+    # Encode back to JPEG bytes
+    success, encoded_image = cv2.imencode(".jpg", redacted_np)
+    if not success:
+        raise ValueError("Failed to encode redacted numpy array back to JPEG.")
+
+    return encoded_image.tobytes()
 
 
 def _safe_filename(filename: str) -> str:
@@ -138,26 +163,48 @@ def _safe_filename(filename: str) -> str:
     return Path(filename).name or "report-image.jpg"
 
 
-def _write_redacted_artifact(
+def _write_redacted_artifact_to_supabase(
     *,
     report_id: UUID,
     filename: str,
     image_bytes: bytes,
-    output_dir: Path,
+    supabase_url: str,
+    supabase_key: str,
 ) -> str:
-    """Write mocked redacted image artifact and return stored path."""
+    """Upload redacted image to Supabase and return the public URL."""
     timestamp = datetime.now(tz=UTC).strftime("%Y%m%dT%H%M%S")
     safe_filename = _safe_filename(filename)
-    report_dir = output_dir / str(report_id)
-    report_dir.mkdir(parents=True, exist_ok=True)
-    path = report_dir / f"redacted-{timestamp}-{safe_filename}"
-    path.write_bytes(image_bytes)
-    return str(path)
+    bucket_path = f"{report_id}/redacted-{timestamp}-{safe_filename}"
+
+    upload_url = f"{supabase_url}/storage/v1/object/images/{bucket_path}"
+    req = request.Request(upload_url, data=image_bytes, method="POST")
+    req.add_header("Authorization", f"Bearer {supabase_key}")
+    req.add_header("apikey", supabase_key)
+    req.add_header("Content-Type", "image/jpeg")  # Could be enhanced with mimetypes
+
+    with request.urlopen(req, timeout=10) as response:  # noqa: S310
+        if response.status >= 300:
+            raise RuntimeError(f"failed to upload image: {response.status}")
+
+    return f"{supabase_url}/storage/v1/object/public/images/{bucket_path}"
 
 
 def _engine_from_url(database_url: str) -> Engine:
-    """Create SQLAlchemy engine for worker database operations."""
-    return create_engine(database_url)
+    """Create SQLAlchemy engine for worker database operations using NullPool."""
+    url = make_url(database_url)
+    connect_args: dict[str, Any] = {}
+    if url.drivername in {"postgres", "postgresql"}:
+        # Use pure-Python pg8000 driver to avoid native driver segfaults in worker.
+        url = url.set(drivername="postgresql+pg8000")
+        sslmode = (url.query.get("sslmode") or "").lower()
+        if sslmode in {"require", "verify-ca", "verify-full"}:
+            import ssl
+
+            connect_args["ssl_context"] = ssl.create_default_context()
+            query = dict(url.query)
+            query.pop("sslmode", None)
+            url = url.set(query=query)
+    return create_engine(url, poolclass=NullPool, connect_args=connect_args)
 
 
 def _persist_worker_outputs(
@@ -222,6 +269,7 @@ def _persist_worker_outputs(
             )
     except SQLAlchemyError as exc:
         raise RuntimeError("failed to persist worker outputs") from exc
+
     finally:
         engine.dispose()
 
@@ -237,9 +285,7 @@ def _notify_processing_result(
     max_attempts = int(os.getenv("WORKER_CALLBACK_MAX_ATTEMPTS", "3"))
     timeout_seconds = float(os.getenv("WORKER_CALLBACK_TIMEOUT_SECONDS", "8"))
     backoff_seconds = float(os.getenv("WORKER_CALLBACK_BACKOFF_SECONDS", "1.0"))
-    callback_url = (
-        f"{api_base_url.rstrip('/')}/reports/{report_id}/processing-result"
-    )
+    callback_url = f"{api_base_url.rstrip('/')}/reports/{report_id}/processing-result"
     body = {"status": status, "error": error_message}
     data = json.dumps(body).encode("utf-8")
 
@@ -254,9 +300,7 @@ def _notify_processing_result(
         try:
             with request.urlopen(req, timeout=timeout_seconds) as response:  # noqa: S310
                 if response.status < 200 or response.status >= 300:
-                    raise RuntimeError(
-                        f"callback returned status {response.status}"
-                    )
+                    raise RuntimeError(f"callback returned status {response.status}")
                 return
         except (error.URLError, TimeoutError, RuntimeError) as exc:
             last_error = exc
