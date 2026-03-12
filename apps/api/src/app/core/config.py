@@ -29,7 +29,12 @@ class Settings(BaseSettings):
 
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
 
-    queue_backend: Literal["mock", "in_process"] = "mock"
+    redis_url: str = "redis://localhost:6379/0"
+    queue_backend: Literal["mock", "rq"] = "mock"
+    queue_name: str = "image-processing"
+    queue_default_timeout: int = 300
+    queue_retry_max: int = 3
+    queue_retry_intervals: list[int] = Field(default_factory=lambda: [1, 3, 5])
     queue_enqueue_max_attempts: int = 3
     queue_enqueue_backoff_seconds: list[float] = Field(
         default_factory=lambda: [0.0, 0.0, 0.0]
@@ -44,7 +49,6 @@ class Settings(BaseSettings):
     supabase_publishable_key: str | None = None
     supabase_secret_key: str | None = None
     database_url: str
-    image_processing_model_version: str = "efficientnet-b0-best_model.pth"
     data_backend: Literal["mock", "sql"] = "mock"
     routing_backend: Literal["mock", "sql"] = "mock"
     routing_algorithm: Literal["dijkstra", "astar"] = "dijkstra"

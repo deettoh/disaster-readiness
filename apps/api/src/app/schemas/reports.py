@@ -107,7 +107,7 @@ class ReportStatusResponse(BaseModel):
 
 
 class ReportProcessingResultRequest(BaseModel):
-    """Payload for report processing result updates."""
+    """Worker callback payload for report processing result."""
 
     status: Literal["complete", "failed"]
     error: str | None = None

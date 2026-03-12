@@ -22,7 +22,7 @@ class PlateDetector:
         self.conf = conf
 
     def detect(self, image):
-        """Detect license plates in the given image and return bounding boxes as (x, y, w, h)."""
+        """Detect license plates in the given image and return bounding boxes."""
         results = self.model.predict(source=image, conf=self.conf, verbose=False)[0]
 
         boxes = []
@@ -30,8 +30,6 @@ class PlateDetector:
         if results.boxes is not None:
             for box in results.boxes.xyxy.cpu().numpy():
                 x1, y1, x2, y2 = box[:4]
-                w = int(x2) - int(x1)
-                h = int(y2) - int(y1)
-                boxes.append((int(x1), int(y1), w, h))
+                boxes.append([int(x1), int(y1), int(x2), int(y2)])
 
         return boxes
