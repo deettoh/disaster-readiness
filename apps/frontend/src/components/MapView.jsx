@@ -233,19 +233,19 @@ export default function MapView({
             "case",
             ["==", ["get", "shelter_id"], selectedShelter],
             11,
-            6
+            9
           ],
           "circle-color": [
             "case",
             ["==", ["get", "shelter_id"], selectedShelter],
             "#22c55e",
-            "#3b82f6"
+            "#9900ff"
           ],
           "circle-stroke-width": [
             "case",
             ["==", ["get", "shelter_id"], selectedShelter],
             3,
-            1
+            2
           ],
           "circle-stroke-color": "#ffffff"
         }
@@ -256,19 +256,19 @@ export default function MapView({
         "case",
         ["==", ["get", "shelter_id"], selectedShelter],
         11,
-        6
+        9
       ]);
       mapRef.current.setPaintProperty("shelters", "circle-color", [
         "case",
         ["==", ["get", "shelter_id"], selectedShelter],
         "#22c55e",
-        "#3b82f6"
+        "#9900ff"
       ]);
       mapRef.current.setPaintProperty("shelters", "circle-stroke-width", [
         "case",
         ["==", ["get", "shelter_id"], selectedShelter],
         3,
-        1
+        2
       ]);
     }
   }, [shelters, selectedShelter]);
@@ -637,8 +637,10 @@ async function addShelterLayer(map) {
       type: "circle",
       source: "shelter-source",
       paint: {
-        "circle-radius": 10,
-        "circle-color": "#9900ff",      // blue fill
+        "circle-radius": 9,
+        "circle-color": "#9900ff",
+        "circle-stroke-width": 2,
+        "circle-stroke-color": "#ffffff"
       }
     });
 
