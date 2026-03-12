@@ -5,11 +5,12 @@ from __future__ import annotations
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.pool import NullPool
 
 
 def create_data_engine(database_url: str) -> Engine:
     """Create a SQLAlchemy engine for API data operations."""
-    return create_engine(database_url, pool_pre_ping=True)
+    return create_engine(database_url, poolclass=NullPool)
 
 
 def create_session_factory(
@@ -25,4 +26,3 @@ def create_session_factory(
         autocommit=False,
         expire_on_commit=False,
     )
-

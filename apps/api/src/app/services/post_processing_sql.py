@@ -9,6 +9,7 @@ from uuid import UUID
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.pool import NullPool
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +33,7 @@ class SQLPostProcessingHooks:
     ) -> None:
         """Initialize with DB connection and tuning parameters."""
         self._database_url = database_url
-        self._engine = engine or create_engine(database_url)
+        self._engine = engine or create_engine(database_url, poolclass=NullPool)
         self._road_penalty_radius_m = road_penalty_radius_m
         self._road_penalty_weight = road_penalty_weight
         self._readiness_alert_threshold = readiness_alert_threshold
