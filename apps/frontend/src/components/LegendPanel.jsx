@@ -53,7 +53,7 @@ export default function LegendPanel({ layers, toggleLayer }) {
           className={`flex items-center gap-2 cursor-pointer transition-opacity duration-150
           ${layers.flood ? "opacity-100" : "opacity-30"}`}
         >
-          <span className="w-3 h-3 rounded-full bg-blue-600"/>
+          <span className="w-3 h-3 rounded-full border-2 border-white bg-blue-600"/>
           <span>Flood</span>
         </div>
 
@@ -62,7 +62,7 @@ export default function LegendPanel({ layers, toggleLayer }) {
           className={`flex items-center gap-2 cursor-pointer transition-opacity duration-150
           ${layers.fire ? "opacity-100" : "opacity-30"}`}
         >
-          <span className="w-3 h-3 rounded-full bg-red-600"/>
+          <span className="w-3 h-3 rounded-full border-2 border-white bg-red-600"/>
           <span>Fire</span>
         </div>
 
@@ -71,7 +71,7 @@ export default function LegendPanel({ layers, toggleLayer }) {
           className={`flex items-center gap-2 cursor-pointer transition-opacity duration-150
           ${layers.landslide ? "opacity-100" : "opacity-30"}`}
         >
-          <span className="w-3 h-3 rounded-full bg-yellow-500"/>
+          <span className="w-3 h-3 rounded-full border-2 border-white bg-yellow-500"/>
           <span>Landslide</span>
         </div>
 
@@ -80,7 +80,7 @@ export default function LegendPanel({ layers, toggleLayer }) {
           className={`flex items-center gap-2 cursor-pointer transition-opacity duration-150
           ${layers.normal ? "opacity-100" : "opacity-30"}`}
         >
-          <span className="w-3 h-3 rounded-full bg-green-600"/>
+          <span className="w-3 h-3 rounded-full border-2 border-white bg-green-600"/>
           <span>Normal</span>
         </div>
 
@@ -92,7 +92,7 @@ export default function LegendPanel({ layers, toggleLayer }) {
         className={`flex items-center gap-2 cursor-pointer transition-opacity duration-150
         ${layers.shelter ? "opacity-100" : "opacity-30"}`}
       >
-        <span className="w-3 h-3 rounded-full border-2 border-white bg-blue-500"/>
+        <span className="w-3 h-3 rounded-full bg-purple-500"/>
         <span>Shelter</span>
       </div>
 
