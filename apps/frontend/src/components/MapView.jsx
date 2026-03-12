@@ -191,7 +191,7 @@ export default function MapView({
   
   useEffect(() => {
 
-    if (!mapRef.current || !routeGeoJSON) return;
+    if (!mapRef.current) return;
     if (!mapRef.current.isStyleLoaded()) return;
 
     if(!routeGeoJSON){
