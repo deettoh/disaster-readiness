@@ -53,6 +53,13 @@ export default function MapView({
         const routeGeoJSON = await routeRes.json();
         addRoadLayer(map, routeGeoJSON);
 
+        const hazardGeoJSON = await loadHazards();
+
+        addHazardLayer(map, hazardGeoJSON, (hazard) => {
+          setSelectedHazard(hazard);
+          onHazardClick?.(hazard);
+        });
+
         const readinessGeoJSON = await loadReadiness();
 
         setLocalReadiness(readinessGeoJSON);
@@ -63,14 +70,6 @@ export default function MapView({
         } else {
           addReadinessLayer(map, readinessGeoJSON, onCellHover);
         }
-
-        const hazardGeoJSON = await loadHazards();
-
-        addHazardLayer(map, hazardGeoJSON, (hazard) => {
-          setSelectedHazard(hazard);
-          onHazardClick?.(hazard);
-        });
-
         await addShelterLayer(map);
 
       } catch (err) {
