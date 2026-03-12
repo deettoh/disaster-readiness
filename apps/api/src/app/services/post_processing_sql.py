@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class SQLPostProcessingHooks:
     """Post processing hooks that call readiness engine DB functions.
 
-    Triggered after image processing completes for a report.
+    Triggered after worker completes hazard classification for a report.
     Each hook resolves the affected grid cell from the report geometry,
     then delegates to the corresponding Postgres function.
     """
