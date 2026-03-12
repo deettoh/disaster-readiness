@@ -317,7 +317,7 @@ export default function MapView({
 }
 
 /*
- * DATA LODAERS
+ * DATA LOADERS
  */
 
 async function loadHazards() {
@@ -449,7 +449,9 @@ function addHazardLayer(map, geojson, onHazardClick) {
           "max",
           ["get", "confidence"],
           0.4
-        ]
+        ],
+        "circle-stroke-color": "#ffffff",
+        "circle-stroke-width": 2
       }
     });
 
@@ -619,7 +621,6 @@ function addReadinessLayer(map, geojson, onCellHover) {
 async function addShelterLayer(map) {
 
   const geojson = await shelterCSVToGeoJSON("/pj_shelters.csv");
-
   if (!map.getSource("shelter-source")) {
     map.addSource("shelter-source", {
       type: "geojson",
@@ -636,10 +637,8 @@ async function addShelterLayer(map) {
       type: "circle",
       source: "shelter-source",
       paint: {
-        "circle-radius": 7,
-        "circle-color": "#3b82f6",      // blue fill
-        "circle-stroke-color": "#ffffff", // white outer border
-        "circle-stroke-width": 2
+        "circle-radius": 10,
+        "circle-color": "#9900ff",      // blue fill
       }
     });
 
