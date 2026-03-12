@@ -226,6 +226,14 @@ def _persist_processing_outputs(
         RETURNING id;
         """
     )
+    report_sql = text(
+        """
+        UPDATE public.reports
+        SET hazard_type = :prediction_type,
+            confidence = :probability
+        WHERE id = :report_id;
+        """
+    )
 
     engine = _engine_from_url(database_url)
     try:
@@ -247,6 +255,14 @@ def _persist_processing_outputs(
                     "report_id": report_id,
                     "bucket_path": redacted_path,
                     "caption": "redacted-upload",
+                },
+            )
+            conn.execute(
+                report_sql,
+                {
+                    "report_id": report_id,
+                    "prediction_type": classification.hazard_label,
+                    "probability": classification.confidence,
                 },
             )
     except SQLAlchemyError as exc:
