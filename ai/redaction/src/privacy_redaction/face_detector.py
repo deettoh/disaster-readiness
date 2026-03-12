@@ -10,7 +10,7 @@ class FaceDetector:
         """Initialize the face detector with a confidence threshold."""
         self.conf_threshold = confidence_threshold
 
-    def detect_faces(self, image):
+    def detect(self, image):
         """Detect faces and return bounding boxes in pixel coordinates."""
         detections = RetinaFace.detect_faces(image)
 
