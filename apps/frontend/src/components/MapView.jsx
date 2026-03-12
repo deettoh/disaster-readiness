@@ -53,13 +53,6 @@ export default function MapView({
         const routeGeoJSON = await routeRes.json();
         addRoadLayer(map, routeGeoJSON);
 
-        const hazardGeoJSON = await loadHazards();
-
-        addHazardLayer(map, hazardGeoJSON, (hazard) => {
-          setSelectedHazard(hazard);
-          onHazardClick?.(hazard);
-        });
-
         const readinessGeoJSON = await loadReadiness();
 
         setLocalReadiness(readinessGeoJSON);
@@ -71,6 +64,13 @@ export default function MapView({
           addReadinessLayer(map, readinessGeoJSON, onCellHover);
         }
         await addShelterLayer(map);
+
+        const hazardGeoJSON = await loadHazards();
+
+        addHazardLayer(map, hazardGeoJSON, (hazard) => {
+          setSelectedHazard(hazard);
+          onHazardClick?.(hazard);
+        });
 
       } catch (err) {
         console.error("Failed to initialize layers:", err);
