@@ -20,7 +20,19 @@ apps/frontend/dist/
 !.env.example
 .vscode/
 .DS_Store
+*.log
+*.swp
+*.bak
 
 # Test and coverage artifacts
 coverage/
 htmlcov/
+
+# AI Artifacts and Datasets (Excluded to save space, but models Kept)
+ai/**/artifacts/
+ai/**/runs/
+ai/**/wandb/
+ai/**/plate-dataset/
+data/*
+notebooks/.ipynb_checkpoints/
+wandb/
