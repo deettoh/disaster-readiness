@@ -194,6 +194,11 @@ export default function MapView({
     if (!mapRef.current || !routeGeoJSON) return;
     if (!mapRef.current.isStyleLoaded()) return;
 
+    if(!routeGeoJSON){
+      if(mapRef.current.getLayer("evac-route")) mapRef.current.removeLayer("evac-route");
+      if(mapRef.current.getSource("evac-route")) mapRef.current.removeSource("evac-route");
+      return;
+    }
     if (mapRef.current.getSource("evac-route")) {
       mapRef.current.getSource("evac-route").setData(routeGeoJSON);
       return;
