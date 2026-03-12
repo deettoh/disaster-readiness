@@ -53,13 +53,6 @@ export default function MapView({
         const routeGeoJSON = await routeRes.json();
         addRoadLayer(map, routeGeoJSON);
 
-        const hazardGeoJSON = await loadHazards();
-
-        addHazardLayer(map, hazardGeoJSON, (hazard) => {
-          setSelectedHazard(hazard);
-          onHazardClick?.(hazard);
-        });
-
         const readinessGeoJSON = await loadReadiness();
 
         setLocalReadiness(readinessGeoJSON);
@@ -71,6 +64,13 @@ export default function MapView({
           addReadinessLayer(map, readinessGeoJSON, onCellHover);
         }
         await addShelterLayer(map);
+
+        const hazardGeoJSON = await loadHazards();
+
+        addHazardLayer(map, hazardGeoJSON, (hazard) => {
+          setSelectedHazard(hazard);
+          onHazardClick?.(hazard);
+        });
 
       } catch (err) {
         console.error("Failed to initialize layers:", err);
@@ -191,9 +191,14 @@ export default function MapView({
   
   useEffect(() => {
 
-    if (!mapRef.current || !routeGeoJSON) return;
+    if (!mapRef.current) return;
     if (!mapRef.current.isStyleLoaded()) return;
 
+    if(!routeGeoJSON){
+      if(mapRef.current.getLayer("evac-route")) mapRef.current.removeLayer("evac-route");
+      if(mapRef.current.getSource("evac-route")) mapRef.current.removeSource("evac-route");
+      return;
+    }
     if (mapRef.current.getSource("evac-route")) {
       mapRef.current.getSource("evac-route").setData(routeGeoJSON);
       return;
@@ -233,19 +238,19 @@ export default function MapView({
             "case",
             ["==", ["get", "shelter_id"], selectedShelter],
             11,
-            6
+            9
           ],
           "circle-color": [
             "case",
             ["==", ["get", "shelter_id"], selectedShelter],
             "#22c55e",
-            "#3b82f6"
+            "#9900ff"
           ],
           "circle-stroke-width": [
             "case",
             ["==", ["get", "shelter_id"], selectedShelter],
             3,
-            1
+            2
           ],
           "circle-stroke-color": "#ffffff"
         }
@@ -256,19 +261,19 @@ export default function MapView({
         "case",
         ["==", ["get", "shelter_id"], selectedShelter],
         11,
-        6
+        9
       ]);
       mapRef.current.setPaintProperty("shelters", "circle-color", [
         "case",
         ["==", ["get", "shelter_id"], selectedShelter],
         "#22c55e",
-        "#3b82f6"
+        "#9900ff"
       ]);
       mapRef.current.setPaintProperty("shelters", "circle-stroke-width", [
         "case",
         ["==", ["get", "shelter_id"], selectedShelter],
         3,
-        1
+        2
       ]);
     }
   }, [shelters, selectedShelter]);
@@ -637,8 +642,10 @@ async function addShelterLayer(map) {
       type: "circle",
       source: "shelter-source",
       paint: {
-        "circle-radius": 10,
-        "circle-color": "#9900ff",      // blue fill
+        "circle-radius": 9,
+        "circle-color": "#9900ff",
+        "circle-stroke-width": 2,
+        "circle-stroke-color": "#ffffff"
       }
     });
 
