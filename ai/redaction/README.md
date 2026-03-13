@@ -4,7 +4,17 @@ This module implements an automated privacy redaction pipeline for disaster resp
 
 ## Pipeline
 
-Input image -> Face detection -> License plate detection -> Blur sensitive regions -> Save redacted image & Delete Original Image
+Input image → Face detection → License plate detection → Blur sensitive regions → Save redacted image & Delete Original Image
+
+## Folder Structure
+
+```text
+ai/redaction/
+├── artifacts/              # Output redacted images
+├── models/                 # YOLOv8 license plate model weights
+├── notebook/               # Notebooks for YOLOv8 and RetinaFace testing
+└── src/                    # Core source code (blurring, pipeline, utils)
+```
 
 ## Components
 
@@ -33,35 +43,37 @@ All detected regions are blurred before storage.
 
 ## Output
 
-Redacted images are saved in: disaster-readiness/ai/redaction/outputs
+Redacted images are saved in: `disaster-readiness/ai/redaction/outputs`
 
-## Dataset
+## Data Requirements
 
-The license plate detection model was trained using a Malaysian license plate dataset from Roboflow.
+To train or evaluate the license plate detection model, the following dataset is required (not included in this repository due to size constraints):
 
-Dataset source:
-https://universe.roboflow.com/licenseplatemalaysia/license-plate-malaysia-tjifn
+| Dataset | Source | Format | Location |
+| :--- | :--- | :--- | :--- |
+| **Malaysian License Plates** | [Roboflow — License Plate Malaysia](https://universe.roboflow.com/licenseplatemalaysia/license-plate-malaysia-tjifn) | YOLO annotation | `data/external/` |
 
-Dataset details:
+### Dataset Details
 
-- Images: 4358
-- Classes: 1 (license plate)
-- Annotation format: YOLO
+**License Plate Malaysia**:
+
+- **Images**: 4,358
+- **Classes**: 1 (license plate)
+- **Annotation format**: YOLO
 - Training / validation split used for model training
 
-The dataset is not included in this repository due to size constraints.
+Face detection uses the pretrained RetinaFace model and does not require a separate training dataset.
 
 ## Model Training
 
 The license plate detector was trained using YOLOv8.
 
-Model: yolov8s  
-Image size: 640  
-Batch size: 8  
-Epochs: 100  
-Device: Apple MPS
+- **Model**: yolov8s
+- **Image size**: 640
+- **Batch size**: 8
+- **Epochs**: 100
 
-## Performance:
+## Performance
 
-- mAP50: 0.83
-- mAP50-95: 0.56
+- **mAP50**: 0.83
+- **mAP50-95**: 0.56
