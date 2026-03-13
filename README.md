@@ -1,8 +1,8 @@
 # Hyperlocal Disaster Readiness with Community Sensing (Malaysia)
 
-A web-first, AI-enabled disaster readiness platform for Malaysia that lets users submit hazard photos and locations from a mobile browser, then uses hazard classification, privacy redaction, dynamic routing, and a readiness score engine to generate safer evacuation micro-routes and real-time alerts.
+An AI based disaster readiness web application for Malaysia that lets users submit hazard photos and locations from a mobile browser, then uses hazard classification, privacy redaction, dynamic routing, and a readiness score engine to generate safer evacuation routes and real time alerts.
 
-> **MVP study area:** Petaling Jaya, Selangor — chosen for its mix of urban density, known flood-prone zones, and OSM road data availability.
+> **MVP study area:** Petaling Jaya, Selangor, chosen for its mix of urban density, known flood-prone zones, and OSM road data availability.
 
 ---
 
@@ -141,7 +141,7 @@ Interactive API docs: `http://localhost:8000/docs`
 ### 1. Clone and configure
 
 ```bash
-git clone <repo-url> && cd disaster-readiness
+git clone https://github.com/deettoh/disaster-readiness.git && cd disaster-readiness
 cp .env.example .env
 # Edit .env with your DATABASE_URL, Supabase keys, etc.
 ```
@@ -150,7 +150,7 @@ cp .env.example .env
 
 ```bash
 # Python (API + image processing + AI)
-poetry install --with api,worker
+poetry install
 
 # Frontend
 cd apps/frontend && npm install && cd ../..
@@ -199,9 +199,10 @@ disaster-readiness/
 ├── apps/
 │   ├── api/                # FastAPI backend service
 │   └── frontend/           # React + MapLibre web app
+├── assets/                # Screenshots of prototype UI
 ├── data/                   # External, processed, and sample datasets
+├── docs/                # Project report and demo video
 ├── routing/                # pgRouting SQL, graph prep, accessibility
-├── scripts/                # Automation and utility scripts
 ├── supabase/               # Migrations, seeds, DB config
 └── tests/                  # All test suites
 ```
@@ -218,6 +219,21 @@ disaster-readiness/
 
 ---
 
+## Screenshots
+
+### Landing Page
+![Landing Page](assets/screenshots/landing_page.png)
+
+### Readiness Panel
+![Readiness Panel](assets/screenshots/readiness_panel.png)
+
+### Hazard Panel
+![Hazard Panel](assets/screenshots/hazard_panel.png)
+
+Full screenshot gallery: [docs/screenshots/README.md](docs/screenshots/README.md)
+
+---
+
 ## Deployment
 
 | Service | Platform | Notes |
@@ -231,4 +247,4 @@ disaster-readiness/
 ## Notes
 
 - Poetry is initialized at repository root (`pyproject.toml`, `poetry.lock`, `.venv`).
-
+- Report and demo video link can be found in [`docs/`](docs/README.md) |

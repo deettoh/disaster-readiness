@@ -84,4 +84,4 @@ The map renders the following data layers, all fetched from the backend API:
 3. **Shelter markers** — evacuation shelter points from CSV
 4. **Route polyline** — computed evacuation route from pgRouting
 
-See [apps/api/README.md](../api/README.md) for the backend endpoints that supply this data.
+See [`apps/api/README.md`](../api/README.md) for the backend endpoints that supply this data.

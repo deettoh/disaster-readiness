@@ -85,4 +85,4 @@ Image processing (hazard classification + privacy redaction) runs as in-process 
 5. Writes classification results to `hazard_predictions`
 6. Triggers road penalty updates, readiness recomputation, and alert generation
 
-See [ai/classification/README.md](../../ai/classification/README.md) and [ai/redaction/README.md](../../ai/redaction/README.md) for model details.
+See [`ai/classification/README.md`](../../ai/classification/README.md) and [`ai/redaction/README.md`](../../ai/redaction/README.md) for model details.

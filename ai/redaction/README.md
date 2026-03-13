@@ -13,6 +13,7 @@ ai/redaction/
 ├── artifacts/              # Output redacted images
 ├── models/                 # YOLOv8 license plate model weights
 ├── notebook/               # Notebooks for YOLOv8 and RetinaFace testing
+├── scripts/                # CLI scripts for evaluation
 └── src/                    # Core source code (blurring, pipeline, utils)
 ```
 

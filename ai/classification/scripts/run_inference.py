@@ -1,12 +1,13 @@
-"""Manual runner for hazard classification inference on one image."""
+"""Manual runner for hazard classification inference on one image.
+
+Usage:
+    poetry run python ai/classification/scripts/run_inference.py
+"""
 
 from __future__ import annotations
 
-import os
 import sys
 from pathlib import Path
-
-from hazard_classification.inference import predict_hazard
 
 ROOT_DIR = Path(__file__).resolve().parents[3]
 CLASSIFICATION_SRC = ROOT_DIR / "ai" / "classification" / "src"
@@ -17,26 +18,12 @@ for path in (str(ROOT_DIR), str(CLASSIFICATION_SRC)):
     if path not in sys.path:
         sys.path.insert(0, path)
 
-
-def _resolve_path(raw_path: str, default_path: Path) -> Path:
-    """Resolve env path to absolute path using repo root when needed."""
-    if not raw_path.strip():
-        return default_path
-    path = Path(raw_path).expanduser()
-    return path if path.is_absolute() else ROOT_DIR / path
-
-
-def _get_image_path() -> Path:
-    """Read single image path from CLASSIFICATION_TEST_IMAGE_FILE."""
-    return _resolve_path(
-        os.getenv("CLASSIFICATION_TEST_IMAGE_FILE", ""),
-        DEFAULT_IMAGE_FILE,
-    )
+from hazard_classification.inference import predict_hazard  # noqa: E402
 
 
 def main() -> int:
     """Run real model inference on one configured image."""
-    image_path = _get_image_path()
+    image_path = DEFAULT_IMAGE_FILE
     if not image_path.exists():
         print(f"Test image does not exist: {image_path}")
         return 1

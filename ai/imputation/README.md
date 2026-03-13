@@ -4,7 +4,7 @@ This module implements a machine learning pipeline to build the baseline vulnera
 
 ## Pipeline
 
-Data Loading (SRTM, Hotspots, Waterways, Accessibility) → Feature Extraction → Proxy Label Construction → XGBoost Training (with W&B Tracking) → Model Artifacts & DB Writeback
+Data Loading (SRTM, Hotspots, Waterways, Accessibility) → Feature Extraction → Proxy Label Construction → XGBoost Training (with W&B Tracking) → Model Artifacts and DB Writeback
 
 ## Folder Structure
 

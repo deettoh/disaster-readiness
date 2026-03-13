@@ -9,19 +9,16 @@ import sys
 from pathlib import Path
 
 import cv2
-from dotenv import load_dotenv
-
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
-
-load_dotenv(PROJECT_ROOT / ".env")
 
 from ai.redaction.src.privacy_redaction.blur import blur_boxes  # noqa: E402
 from ai.redaction.src.privacy_redaction.face_detector import FaceDetector  # noqa: E402
 from ai.redaction.src.privacy_redaction.plate_detector import (
     PlateDetector,  # noqa: E402
 )
+
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 logging.basicConfig(
     level=logging.INFO,
@@ -53,7 +50,7 @@ def main() -> None:
     plate_detector = PlateDetector()
 
     logger.info("Running face detection...")
-    face_boxes = face_detector.detect_faces(image)
+    face_boxes = face_detector.detect(image)
     logger.info(f"Detected {len(face_boxes)} face boxes.")
 
     logger.info("Running plate detection...")
