@@ -12,7 +12,7 @@ Input Image → Image Preprocessing → Hazard Classification Model → Predicte
 ai/classification/
 ├── models/                 # Trained model weights (hazard_classifier.pt)
 ├── notebook/               # Jupyter notebooks for EDA and model training
-├── scripts/                # CLI scripts for training and evaluation
+├── scripts/                # CLI scripts for evaluation
 └── src/                    # Core source code (dataset, model, inference logic)
 ```
 
