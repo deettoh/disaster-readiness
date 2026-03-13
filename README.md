@@ -223,7 +223,7 @@ disaster-readiness/
 | Service | Platform | Notes |
 | --- | --- | --- |
 | Frontend | Vercel | Static React build |
-| API | Render | Single Docker container (API + image processing) |
+| API | DigitalOcean | Single Docker container (API + image processing) |
 | Database + Storage | Supabase | Managed PostgreSQL + PostGIS + pgRouting + Storage |
 
 ---
