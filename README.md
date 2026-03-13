@@ -221,13 +221,13 @@ disaster-readiness/
 ## Screenshots
 
 ### Landing Page
-![Landing Page](docs/screenshots/landing_page.png)
+![Landing Page](assets/screenshots/landing_page.png)
 
 ### Readiness Panel
-![Readiness Panel](docs/screenshots/readiness_panel.png)
+![Readiness Panel](assets/screenshots/readiness_panel.png)
 
 ### Hazard Panel
-![Hazard Panel](docs/screenshots/hazard_panel.png)
+![Hazard Panel](assets/screenshots/hazard_panel.png)
 
 Full screenshot gallery: [docs/screenshots/README.md](docs/screenshots/README.md)
 
