@@ -247,4 +247,4 @@ Full screenshot gallery: [docs/screenshots/README.md](docs/screenshots/README.md
 ## Notes
 
 - Poetry is initialized at repository root (`pyproject.toml`, `poetry.lock`, `.venv`).
-- Report and demo video link can be found in [`docs/`](docs/README.md) |
+- Report and demo video link can be found in [`docs/`](docs/)
