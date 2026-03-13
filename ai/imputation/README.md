@@ -1,10 +1,22 @@
 # Risk Imputation Model
 
-This module implements a machine learning pipeline to build the **baseline vulnerability score** for each grid cell in Petaling Jaya. It uses geographical features to estimate disaster risk in areas where historical damage data may be sparse.
+This module implements a machine learning pipeline to build the baseline vulnerability score for each grid cell in Petaling Jaya. It uses geographical features to estimate disaster risk in areas where historical damage data may be sparse.
 
 ## Pipeline
 
-Data Loading (SRTM, Hotspots, Waterways, Accessibility) -> Feature Extraction -> Proxy Label Construction -> XGBoost Training (with W&B Tracking) -> Model Artifacts & DB Writeback
+Data Loading (SRTM, Hotspots, Waterways, Accessibility) → Feature Extraction → Proxy Label Construction → XGBoost Training (with W&B Tracking) → Model Artifacts & DB Writeback
+
+## Folder Structure
+
+```text
+ai/imputation/
+├── artifacts/              # Generated outputs (metrics, models, feature importance plots)
+├── data/                   # Processed datasets (pj_hotspots.csv)
+├── models/                 # Saved XGBoost model objects
+├── notebook/               # Jupyter notebooks for EDA, training, and evaluation
+├── scripts/                # CLI runners for imputation pipeline
+└── src/                    # Core source code (preprocessing, trainer, explainer)
+```
 
 ## Components
 
@@ -52,7 +64,7 @@ To train or run the model, the following datasets must be present in `data/exter
 
 | Dataset | Source | Location / File Pattern |
 | :--- | :--- | :--- |
-| **SRTM Elevation** | [ArduPilot Terrain Generator](https://terrain.ardupilot.org/SRTM3/Eurasia/) | `data/external/N03E101.hgt` |
+| **SRTM Elevation** | [OpenTopography — SRTM GL1](https://portal.opentopography.org/raster?opentopoID=OTSRTM.082015.4326.1) | `data/external/N03E101.hgt` |
 | **Waterways** | [HOTOSM Malaysia](https://data.humdata.org/) | `data/external/*waterways_lines*.geojson` |
 | **Flood Hotspots** | JPS Malaysia | `ai/imputation/data/pj_hotspots.csv` |
 | **Accessibility** | Internal `routing` module | `routing/artifacts/cell_accessibility_handoff.csv` |
@@ -78,7 +90,9 @@ The baseline model was trained with the following hyperparameters:
 ### Performance
 
 MAE: 0.013068
+
 R^2: 0.99371
+
 RMSE: 0.018357
 
 ## Running the Model

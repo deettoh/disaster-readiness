@@ -1,121 +1,234 @@
-# Hyperlocal Disaster Readiness (Malaysia)
+# Hyperlocal Disaster Readiness with Community Sensing (Malaysia)
 
-## Quick start
+A web-first, AI-enabled disaster readiness platform for Malaysia that lets users submit hazard photos and locations from a mobile browser, then uses hazard classification, privacy redaction, dynamic routing, and a readiness score engine to generate safer evacuation micro-routes and real-time alerts.
 
-### 1) Before running the app (all modes)
+> **MVP study area:** Petaling Jaya, Selangor — chosen for its mix of urban density, known flood-prone zones, and OSM road data availability.
 
-1. Copy environment template:
-	 ```bash
-	 cp .env.example .env
-	 ```
-2. Install backend dependencies (API + image processing):
-	 ```bash
-	 poetry install --with api,worker
-	 ```
-   Note: the `worker` group contains image processing dependencies now run inside the API.
-3. Install frontend dependencies:
-	 ```bash
-	 cd apps/frontend && npm install
-	 ```
+---
 
-4. Return to root directory:
-     ```bash
-    cd ../..
-     ```
+## Features
 
-5. **Seed the Database (SQL Backend)**:
-   If you are running with `ROUTING_BACKEND=sql` (default for advanced features), run these in order from the root:
-	 ```bash
-	 # 1. Reset DB (applies migrations + static seeds like shelters)
-	 supabase db reset
+- **Community hazard reporting** — submit photos and GPS location from any phone browser (camera, file upload, or pin-drop fallback)
+- **AI hazard classification** — EfficientNet-B0 classifies scenes into flood, fire, landslide, or normal (with confidence scores)
+- **Privacy redaction** — RetinaFace face detection + YOLOv8 license plate detection with Gaussian blur before storage or display
+- **Dynamic evacuation routing** — pgRouting, using Dijkstra/A* algorithm, computes micro-routes that reroute around newly hazardous roads
+- **Readiness scoring** — transparent 0 to 100 score per neighborhood with breakdown (vulnerability, hazard penalty, accessibility, data confidence)
+- **Real-time alerts** — auto-generated when readiness scores cross defined thresholds
+- **Risk imputation** — XGBoost baseline vulnerability model using elevation, slope, river proximity, hotspot distance, road density, and travel time
+- **Responsible AI** — confidence thresholds, model versioning, redacted-only image storage, temporary retention, consent flow
 
-	 # 2. Import road network (Petaling Jaya)
-	 poetry run python routing/scripts/import_roads.py
+---
 
-	 # 3. Generate analysis grid (500m cells)
-	 poetry run python routing/scripts/generate_grid.py
+## Architecture
 
-	 # 4. Compute accessibility metrics
-	 poetry run python routing/scripts/run_accessibility.py
+```mermaid
+flowchart TB
+    subgraph Client["Phone Browser"]
+        A["Camera / File Upload + GPS"]
+    end
 
-	 # 5. Run risk imputation model (Baseline Vulnerability)
-	 poetry run python ai/imputation/scripts/run_imputation.py --write-db
+    subgraph API["FastAPI Backend"]
+        B["POST /reports + /image"]
+        C["Background Job"]
+        D["Hazard Classifier (EfficientNet-B0)"]
+        E["Privacy Redactor (RetinaFace + YOLOv8)"]
+        F["Post-Processing Hooks"]
+    end
 
-	 # 6. Initialize readiness scores (Initial Readiness)
-	 poetry run python supabase/scripts/initialize_readiness.py
-	 ```
+    subgraph DB["PostgreSQL+PostGIS+pgRouting"]
+        G["reports / images"]
+        H["hazard_predictions"]
+        I["roads_edges (risk_penalty update)"]
+        J["readiness_scores"]
+        K["alerts"]
+    end
 
-### Note on Seeding:
-- `supabase db reset` handles core schema and static reference data (e.g., shelters).
-- The Python scripts in `routing/` and `ai/` handle heavy spatial processing (geopandas/pgRouting) that requires external libraries.
-- Frontend `npm run dev` auto-syncs `routing/artifacts/pj_shelters.csv` to its public folder.
-- See [routing/README.md](routing/README.md) for detailed SQL routing setup.
+    subgraph Storage["Supabase Storage"]
+        L["Redacted Images"]
+    end
 
+    subgraph Frontend["React + MapLibre Dashboard"]
+        M["Map Layers (readiness, hazards, shelters, route)"]
+        N["Panels (readiness, alerts, routing, report)"]
+    end
 
-### 2) Run with Docker
+    A -- "photo + location" --> B
+    B --> C
+    C --> D
+    C --> E
+    E -- "redacted image" --> L
+    D -- "label + confidence" --> H
+    C --> F
+    F -- "penalty update" --> I
+    F -- "score recompute" --> J
+    F -- "threshold check" --> K
+    B -- "report metadata" --> G
 
-- Backend stack (`api`):
-	```bash
-	docker compose up --build
-	```
-- Full stack (adds `frontend`):
-	```bash
-	docker compose --profile frontend up --build
-	```
+    H --> M
+    J --> M
+    K --> N
+    I -- "GET /route" --> M
+    L -- "public URL" --> N
+```
 
-See full container runbook in [DOCKER.md](DOCKER.md).
+---
 
-### 3) Run without Docker
+## Internal Layers
 
-- Start API:
-	```bash
-	poetry run uvicorn app.main:app --host 0.0.0.0 --port 8000 --app-dir apps/api/src
-	```
-- Start frontend (new terminal):
-	```bash
-	cd apps/frontend && npm run dev
-	```
+The system is organized into clearly separated layers:
 
-Useful references:
-- [DOCKER.md](DOCKER.md)
-- [routing/README.md](routing/README.md)
-
-## Directory map
-
-| Directory | What it is for | Who owns it |
+| Layer | Responsibility | Key Directory |
 | --- | --- | --- |
-| `apps/frontend/` | React + Tailwind + MapLibre web app (mobile-first browser UX). Frontend source lives in `apps/frontend/src/`. | Member E (Frontend + UX) |
-| `apps/api/` | FastAPI service, API contracts, validation, and orchestration endpoints. Python package source lives in `apps/api/src/app/`. | Member A (Backend Lead) |
-| `db/migrations/` | SQL migrations for Postgres/PostGIS schema changes. | Member B (Data + Geospatial) |
-| `db/seeds/` | Seed scripts/data for local dev and demo baseline records. | Member B |
-| `db/functions/` | SQL functions/views for readiness, hazard aggregation, and geospatial helpers. | Member B (with C support for routing queries) |
-| `db/policies/` | RLS and data access policy SQL definitions. | Member B + Member A |
-| `routing/sql/` | pgRouting SQL, snapping, route queries, penalty update logic, accessibility metrics. | Member C (Routing Lead) |
-| `routing/data/` | Routing input assets (OSM extracts, prepared graph artifacts/metadata). | Member C + Member B |
-| `ai/classification/` | Hazard image classification inference/training assets and model metadata. Python source lives in `ai/classification/src/hazard_classification/`. | Member D (AI + Privacy) |
-| `ai/redaction/` | Face + plate detection and redaction pipeline code/assets. Python source lives in `ai/redaction/src/privacy_redaction/`. | Member D |
-| `ai/imputation/` | Risk/vulnerability imputation model code, features, and artifacts. Python source lives in `ai/imputation/src/risk_imputation/`. | Member D + Member B |
-| `shared/schemas/` | Shared API/data schemas used across frontend/backend. | Member A + Member E |
-| `shared/types/` | Shared constants/types/contracts for cross-module consistency. | Member A + Member E |
-| `tests/api/` | API-level tests for endpoints, validation, and response contracts. | Member A |
-| `tests/ai/` | Classification/redaction/imputation tests and quality checks. | Member D |
-| `tests/routing/` | Routing query, penalty update, and accessibility metric tests. | Member C |
-| `tests/integration/` | Cross-service integration tests (upload -> AI -> reroute -> readiness -> alerts). | Members A/B/C/D |
-| `tests/e2e/` | End-to-end user flow tests from frontend through backend services. | Member E + Member A |
-| `docker-compose.yml`, `apps/*/Dockerfile` | Local container orchestration and per-service image definitions for API/frontend. | Member A |
-| `infra/deploy/` | Deployment configs/runbooks for Render/Cloud Run + Vercel/Netlify + Supabase. | Member A + Member E |
-| `docs/architecture/` | Architecture diagrams and technical system design notes. | All members |
-| `docs/api/` | API documentation, payload examples, and integration notes. | Member A |
-| `docs/decisions/` | Decision records (scope, tradeoffs, implementation decisions). | All members (maintained by current implementer) |
-| `docs/report/` | Hackathon report evidence, rubric mapping, and submission assets. | All members |
-| `data/external/` | Raw external datasets (GIS, flood, rainfall, boundaries). | Member B |
-| `data/processed/` | Processed/derived datasets ready for app and models. | Member B + Member D |
-| `data/samples/` | Small sample files/images for local testing and demos. | Members C/D/E |
-| `scripts/` | Automation scripts for setup, checks, and repeatable project tasks. | All members |
-| `config/` | Non-secret config templates (for example `.env.example` and runtime config stubs). | Member A |
+| **Frontend** | Interactive map, report submission, panels | [`apps/frontend/`](apps/frontend/README.md) |
+| **API** | REST endpoints, validation, orchestration, rate limiting | [`apps/api/`](apps/api/README.md) |
+| **Services** | Business logic, image processing, routing adapter, weather | `apps/api/src/app/services/` |
+| **Repositories** | Data access layer (SQLAlchemy ORM) | `apps/api/src/app/repositories/` |
+| **Database** | PostGIS schema, migrations, spatial functions, RLS | [`supabase/`](supabase/README.md) |
+| **Routing Engine** | pgRouting SQL, graph prep, penalty updates, accessibility | [`routing/`](routing/README.md) |
+| **AI / ML** | Classification, redaction, imputation pipelines | [`ai/`](#ai-modules) |
+| **Tests** | API, AI, routing, integration, E2E test suites | `tests/` |
+
+---
+
+## Tech Stack
+
+| Category | Technology |
+| --- | --- |
+| **Frontend** | React (Vite), MapLibre GL JS, Vanilla CSS |
+| **Backend** | Python FastAPI, Pydantic, Uvicorn |
+| **Database** | PostgreSQL + PostGIS + pgRouting (via Supabase) |
+| **AI — Classification** | EfficientNet-B0 (PyTorch) |
+| **AI — Redaction** | RetinaFace (face), YOLOv8 (license plate) |
+| **AI — Imputation** | XGBoost regressor |
+| **Storage** | Supabase Storage (redacted images only) |
+| **Environment** | Poetry (Python deps), npm (frontend deps) |
+| **Containerization** | Docker Compose (API + optional frontend) |
+| **Deployment** | Vercel (frontend), DigitalOcean (API), Supabase (DB/storage) |
+
+---
+
+## API Endpoints
+
+All endpoints are prefixed with `/api/v1`. Full endpoint details in [`apps/api/README.md`](apps/api/README.md).
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `GET` | `/health` | Health check |
+| `GET` | `/api/v1/info` | API metadata |
+| `POST` | `/api/v1/reports` | Create hazard report metadata |
+| `POST` | `/api/v1/reports/{id}/image` | Upload image (triggers classification + redaction) |
+| `GET` | `/api/v1/reports/{id}/status` | Report processing status |
+| `GET` | `/api/v1/hazards` | List hazard predictions for map layer |
+| `GET` | `/api/v1/readiness` | List neighborhood readiness scores (0 to 100) |
+| `GET` | `/api/v1/alerts` | List active alerts |
+| `GET` | `/api/v1/route` | Compute evacuation route via pgRouting |
+| `GET` | `/api/v1/weather` | Current weather snapshot |
+
+Interactive API docs: `http://localhost:8000/docs`
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- Python 3.11+ (managed via [Poetry](https://python-poetry.org/))
+- Node.js 18+ and npm
+- Docker (optional, for containerized running)
+- Supabase CLI (for database management)
+- A Supabase project with PostGIS and pgRouting enabled
+
+### 1. Clone and configure
+
+```bash
+git clone <repo-url> && cd disaster-readiness
+cp .env.example .env
+# Edit .env with your DATABASE_URL, Supabase keys, etc.
+```
+
+### 2. Install dependencies
+
+```bash
+# Python (API + image processing + AI)
+poetry install --with api,worker
+
+# Frontend
+cd apps/frontend && npm install && cd ../..
+```
+
+### 3. Seed the database
+
+A sequence of commands must be run in order from the project root:
+
+See [`routing/README.md`](routing/README.md) for detailed routing setup and [`supabase/README.md`](supabase/README.md) for database details.
+
+### 4. Run the application
+
+#### Without Docker
+
+```bash
+# Terminal 1: Start API
+poetry run uvicorn app.main:app --host 0.0.0.0 --port 8000 --app-dir apps/api/src
+
+# Terminal 2: Start frontend
+cd apps/frontend && npm run dev
+```
+
+#### With Docker
+
+```bash
+# Backend only
+docker compose up --build
+
+# Full stack (API + frontend)
+docker compose --profile frontend up --build
+```
+
+See [`DOCKER.md`](DOCKER.md) for the full container runbook.
+
+---
+
+## Project Structure
+
+```text
+disaster-readiness/
+├── ai/
+│   ├── classification/     # Hazard image classification model
+│   ├── imputation/         # Risk/vulnerability imputation model
+│   └── redaction/          # Face + plate privacy redaction
+├── apps/
+│   ├── api/                # FastAPI backend service
+│   └── frontend/           # React + MapLibre web app
+├── data/                   # External, processed, and sample datasets
+├── routing/                # pgRouting SQL, graph prep, accessibility
+├── scripts/                # Automation and utility scripts
+├── supabase/               # Migrations, seeds, DB config
+└── tests/                  # All test suites
+```
+
+---
+
+## AI Modules
+
+| Module | Model | Purpose | Details |
+| --- | --- | --- | --- |
+| **Classification** | EfficientNet-B0 (PyTorch) | Classify hazard type from uploaded image | [README](ai/classification/README.md) |
+| **Redaction** | RetinaFace + YOLOv8 | Blur faces and license plates before storage | [README](ai/redaction/README.md) |
+| **Imputation** | XGBoost Regressor | Predict baseline vulnerability per grid cell | [README](ai/imputation/README.md) |
+
+---
+
+## Deployment
+
+| Service | Platform | Notes |
+| --- | --- | --- |
+| Frontend | Vercel | Static React build |
+| API | Render | Single Docker container (API + image processing) |
+| Database + Storage | Supabase | Managed PostgreSQL + PostGIS + pgRouting + Storage |
+
+---
 
 ## Notes
 
-- Empty scaffold directories include `.gitkeep` so they are tracked in Git.
 - Poetry is initialized at repository root (`pyproject.toml`, `poetry.lock`, `.venv`).
-- Local container stack runbook is in `DOCKER.md` (`docker-compose.yml` for API and optional frontend container).
+

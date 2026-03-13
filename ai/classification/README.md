@@ -1,10 +1,20 @@
 # Hazard Classification Model
 
-This module implements an automated **hazard classification pipeline** that analyzes disaster imagery and identifies the **type of hazard present in the scene**. The model helps emergency responders quickly understand the situation on the ground and prioritize appropriate response actions.
+This module implements an automated hazard classification pipeline that analyzes disaster imagery and identifies the type of hazard present in the scene. The model helps emergency responders quickly understand the situation on the ground and prioritize appropriate response actions.
 
 ## Pipeline
 
 Input Image → Image Preprocessing → Hazard Classification Model → Predicted Hazard Category → Output Label
+
+## Folder Structure
+
+```text
+ai/classification/
+├── models/                 # Trained model weights (hazard_classifier.pt)
+├── notebook/               # Jupyter notebooks for EDA and model training
+├── scripts/                # CLI scripts for training and evaluation
+└── src/                    # Core source code (dataset, model, inference logic)
+```
 
 ## Components
 
@@ -28,13 +38,13 @@ The classifier identifies the following hazard types:
 3. Landslide
 4. No Hazard/Normal
 
-These categories help emergency planners determine **whether a location is accessible, hazardous, or requires intervention**.
+These categories help emergency planners determine whether a location is accessible, hazardous, or requires intervention.
 
 ## Output
 
 Predicted hazard labels are saved to:
 
-disaster-readiness/ai/classification/outputs
+`disaster-readiness/ai/classification/outputs`
 
 Each prediction includes:
 
@@ -43,19 +53,33 @@ Each prediction includes:
 
 This output can be integrated into the disaster response pipeline to assist **route planning and situation awareness**.
 
-## Dataset
+## Data Requirements
 
-The hazard classification model was trained using a curated dataset of disaster imagery containing labeled hazard scenarios.
+To train or evaluate the model, the following datasets are required (not included in this repository due to size constraints):
 
-Dataset characteristics:
+| Dataset | Source | Format | Location |
+| :--- | :--- | :--- | :--- |
+| **Disaster Damage Images** | [Kaggle — Disaster Damage 5-Class](https://www.kaggle.com/datasets/sarthaktandulje/disaster-damage-5class) | `.jpg` | `data/external/` |
+| **Clean/Dirty Road Images** | [Kaggle — Clean/Dirty Road Classification](https://www.kaggle.com/datasets/faizalkarim/cleandirty-road-classification?select=Images) | `.jpg` | `data/external/` |
 
-- Multiple disaster scenarios including floods, fire, and lanslide
-- Images labeled by hazard category
-- Standard image classification format
+### Dataset Details
 
-Due to licensing and storage limitations, the dataset is **not included in this repository**.
+**Disaster Damage 5-Class** — raw image dataset filtered to match project hazard classes:
 
-### Hazard Classification
+| Class | Images |
+| :--- | :--- |
+| Flood | 600 |
+| Fire | 600 |
+| Landslide | 310 |
+
+**Clean/Dirty Road Classification** — used for the "normal / no hazard" class (clean roads only): **113 images**.
+
+### Notes and Limitations
+
+- Imbalanced dataset for landslide and normal classes (though no major misclassification observed on the landslide class)
+- Dataset filtered from original multi-class sources to match the 4 project hazard categories
+
+## Hazard Classification
 
 The system classifies images into predefined hazard categories using a deep learning model trained on disaster-related imagery.
 
@@ -101,11 +125,11 @@ Final test performance:
 
 The trained model weights are stored in:
 
-ai/classification/models/
+`ai/classification/models/`
 
 Example:
 
-hazard_classifier.pt
+`hazard_classifier.pth`
 
 These weights are required for running inference.
 

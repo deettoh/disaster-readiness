@@ -1,132 +1,155 @@
-# Hyperlocal Disaster Readiness (Malaysia) - Routing
+# Routing (pgRouting)
 
-## SQL Routing Backend Setup (for API `ROUTING_BACKEND=sql`)
+This module implements the dynamic evacuation routing engine for the Hyperlocal Disaster Readiness platform. It uses pgRouting on top of PostGIS to compute shortest path evacuation routes that automatically reroute around hazardous road segments.
 
-Run these steps from repository root.
+## Pipeline
+
+OSM Road Extract → Graph Import → Topology Build → Cost Initialization → pgRouting Queries → Dynamic Penalty Updates → Accessibility Metrics
+
+## How It Works
+
+1. **Road graph** is built from OpenStreetMap data for Petaling Jaya
+2. **Base costs** are computed from road segment length and type
+3. **Risk penalties** are initialized at zero and updated dynamically when hazards are reported
+4. **Route cost** = `base_cost + risk_penalty` — penalized roads are avoided by the pathfinding algorithm
+5. **Accessibility metrics** (travel time to shelters, road density) are computed per grid cell and fed into the readiness score engine
+
+## Data Requirements
+
+| Dataset | Source | Format | Description |
+| :--- | :--- | :--- | :--- |
+| **OSM Road Network** | [OpenStreetMap](https://www.openstreetmap.org/node/254073469#map=15/3.09475/101.65229) | `.pbf` | Road network extract for Petaling Jaya with geographical coordinates for shelter locations |
+| **SRTM Elevation** | [OpenTopography — SRTM GL1](https://portal.opentopography.org/raster?opentopoID=OTSRTM.082015.4326.1) | `.hgt` | Elevation raster used for slope-based features and accessibility analysis |
+
+### Notes and Limitations
+
+- The `.pbf` file extracts raw geometry which requires further processing (topology build, cost computation) before it is usable for routing
+- OSM data is a snapshot in time and is not synced with real-time road conditions
+- OSM shapefiles are generated locally under `routing/data/pj_mvp_data/` and are not committed to the repository
+
+## Setup
+
+Run these steps in order from the repository root.
 
 ### Prerequisites
 
-1. Install dependencies:
-  ```bash
-  poetry install
-  ```
-2. Ensure your database is reachable via `DATABASE_URL`:
-  ```
-  postgresql://postgres.<PROJECT_REF>:<DB_PASSWORD>@aws-1-ap-southeast-1.pooler.supabase.com:5432/postgres?sslmode=require
-  ```
-  Routing SQL scripts read `DATABASE_URL` directly.
+```bash
+poetry install
+```
 
-### Build routing database objects (run in order)
+Ensure your database is reachable via `DATABASE_URL`:
+```
+postgresql://postgres.<PROJECT_REF>:<DB_PASSWORD>@aws-1-ap-southeast-1.pooler.supabase.com:5432/postgres?sslmode=require
+```
 
-1. **Reset Database**: Initialise schema and seed static shelter reference data.
-  ```bash
-  supabase db reset
-  ```
-2. **Import Road Network**: Load Petaling Jaya road edges (OSM) into `public.roads_edges`. This uses a pre-processed pg_dump and syncs it with the canonical schema.
-  ```bash
-  poetry run python routing/scripts/import_roads.py
-  ```
-3. **Generate Grid**: Generate a 500m x 500m analysis grid clipped to the PJ boundary and upload to `public.grid_cells`.
-  ```bash
-  poetry run python routing/scripts/generate_grid.py
-  ```
-4. **Compute Accessibility Metrics**: Calculate travel times to shelters and road densities for each grid cell.
-  ```bash
-  poetry run python routing/scripts/run_accessibility.py
-  ```
-5. **Verify (Optional)**: Run the end-to-end integration validator.
-  ```bash
-  poetry run python routing/scripts/verify_sql.py
-  ```
+### Generate Routing Artifacts (run in order)
 
-### Enable SQL backend in API
+Before building the routing database, you must process the raw OSM data into routable artifacts. Run these scripts to generate the local graph data, apply topology, and calculate initial edge costs:
+
+```bash
+# 1. Download and extract OSM road data for Petaling Jaya
+poetry run python -m routing.data.src.osm_extract
+
+# 2. Load the extracted road network into PostGIS
+poetry run python -m routing.data.src.load_postgres
+
+# 3. Build graph topology (source/target nodes)
+poetry run python -m routing.data.src.topology
+
+# 4. Compute base routing costs and initialize risk penalties
+poetry run python -m routing.data.src.cost
+
+# 5. Apply database indexes for routing performance
+poetry run python -m routing.data.src.index
+
+# 6. Run sanity checks on graph connectivity
+poetry run python -m routing.data.src.sanity
+
+# 7. (Optional) Generate a map visualization of the road network
+poetry run python -m routing.data.src.map
+
+# 8. Extract shelter candidates to CSV
+poetry run python -m routing.data.src.shelter
+```
+
+### Build Routing Database (run in order)
+
+```bash
+# 1. Reset DB (applies migrations + seed data)
+supabase db reset
+
+# 2. Import Petaling Jaya road network into public.roads_edges
+poetry run python routing/scripts/import_roads.py
+
+# 3. Generate 500m analysis grid
+poetry run python routing/scripts/generate_grid.py
+
+# 4. Compute accessibility metrics (travel times + road density)
+poetry run python routing/scripts/run_accessibility.py
+
+# 5. Verify setup (optional)
+poetry run python routing/scripts/verify_sql.py
+```
+
+### Enable SQL Backend in API
 
 Set in `.env`:
 
 ```dotenv
 ROUTING_BACKEND=sql
-DATABASE_URL=postgresql://postgres.<PROJECT_REF>:<DB_PASSWORD>@aws-1-ap-southeast-1.pooler.supabase.com:5432/postgres?sslmode=require
+DATABASE_URL=postgresql://postgres.<PROJECT_REF>:<DB_PASSWORD>@...
 ROUTING_ALGORITHM=dijkstra
 ```
 
-Then start the API (Docker or non-Docker) from the root project runbook in [`README.md`](../README.md#2-run-with-docker).
 
 
-Note:
-- OSM shapefiles are generated locally under `routing/data/pj_mvp_data` and are not meant to be committed.
-- If frontend needs shelter points, generate `routing/artifacts/pj_shelters.csv` with:
-  ```bash
-  poetry run python -m routing.data.src.shelter
-  ```
-- Frontend `npm run dev`/`npm run build` auto-syncs this file into `apps/frontend/public/pj_shelters.csv`.
+## Folder Structure
 
-## Supabase schema compatibility layer
+```text
+routing/
+├── artifacts/              # Generated outputs (pj_shelters.csv, route GeoJSON, map PNG)
+├── data/                   # Data acquisition and graph preparation scripts
+│   └── src/
+│       ├── cost.py         # Computes base costs, initializes risk penalties
+│       ├── index.py        # Applies routing-critical indexes
+│       ├── load_postgres.py# Imports road network into PostGIS
+│       ├── map.py          # Generates road network visualization
+│       ├── osm_extract.py  # Downloads & exports road network data (OSMnx)
+│       ├── sanity.py       # Runs graph connectivity checks
+│       ├── shelter.py      # Extracts shelter candidates to CSV
+│       └── topology.py     # Builds source/target topology and vertex table
+├── scripts/                # CLI runner scripts for import, grid generation, accessibility
+├── sql/                    # Core pgRouting query logic and penalty updates
+│   ├── accessibility.py    # Computes metrics and exports CSV handoff
+│   ├── contract.py         # Standardized route contract for API integration
+│   ├── engine.py           # Database engine helper
+│   ├── hazard.py           # Hazard label → penalty mapping
+│   ├── pgr.py              # Dijkstra and A* pathfinding via pgRouting
+│   ├── radius.py           # Radius-based spatial queries for penalty application
+│   ├── route_change.py     # Verifies route changes after hazard events
+│   ├── snapping.py         # Start/end point geometric snapping
+│   └── updater.py          # SQL-based risk penalty updates and cost recomputation
+└── testing/                # Routing QA/demo scripts and test fixtures
+```
 
-Canonical routing storage is `public.roads_edges`.
+## Schema Compatibility
 
-To avoid routing service logic churn, Supabase migration
-`20260305143000_add_routing_compatibility_views.sql` exposes compatibility
-objects expected by the current routing contract:
+Canonical routing storage is `public.roads_edges`. To avoid routing service code churn, Supabase migration `20260305143000_add_routing_compatibility_views.sql` exposes legacy contract objects:
+
 - `public.pj_roads` (compatibility view)
 - `public.pj_roads_vertices_pgr` (compatibility materialized view)
 
-After structural road updates, refresh vertices with:
+After structural road updates, refresh with:
 ```sql
 SELECT public.refresh_pj_roads_vertices_pgr();
 ```
 
-## Folder Structure (Current)
+## Shelter Data
 
-| Path | Purpose |
-| --- | --- |
-| `routing/data` | Data acquisition and graph preparation scripts for Petaling Jaya routing. |
-| `routing/sql` | Core pgRouting query logic and backend contract module (currently reads compatibility objects backed by `public.roads_edges`). |
-| `routing/testing` | Routing QA/demo scripts (edge-case checks, scenario generation, sample output). |
-| `routing/testing/fixtures` | Routing test fixture data (`pj_test_scenarios.json`). |
-| `routing/artifacts` | Generated routing artifacts (`pj_shelters.csv`, map PNG, route GeoJSON). |
-| `routing/data/pj_mvp_data` | Raw ESRI Shapefile dataset used to seed the route graph. |
+If the frontend needs shelter points, generate `routing/artifacts/pj_shelters.csv`:
 
-## Python Modules
-
-| Module | What it is for |
-| --- | --- |
-| `routing/data/src/osm_extract.py` | Downloads and exports road network data for Petaling Jaya using OSMnx. |
-| `routing/data/src/load_postgres.py` | Imports Petaling Jaya road networks into PostGIS/pgRouting. |
-| `routing/data/src/topology.py` | Builds `source`/`target` topology and the routing vertex table. |
-| `routing/data/src/cost.py` | Computes base costs, initializes risk penalties, and aggregates route costs. |
-| `routing/data/src/index.py` | Applies routing-critical indexes to roads and vertices tables. |
-| `routing/data/src/sanity.py` | Runs graph integrity/connectivity sanity checks. |
-| `routing/data/src/map.py` | Generates full road-network visualization PNG into `routing/artifacts`. |
-| `routing/data/src/shelter.py` | Extracts and saves shelter candidates into `routing/artifacts/pj_shelters.csv`. |
-| `routing/sql/snapping.py` | Implements start/end geometric snapping helpers. |
-| `routing/sql/pgr.py` | Provides pathfinding with Dijkstra and A* using pgRouting. |
-| `routing/sql/contract.py` | Standardized route contract for backend integration. |
-| `routing/sql/engine.py` | Database engine helper for routing SQL modules. |
-| `routing/sql/hazard.py` | Define penalty mapping based on hazard type and penalty scaling based on confidence score. |
-| `routing/sql/radius.py` | Implements radius-based spatial queries and verifies penalty application and resets. |
-| `routing/sql/updater.py` | Implements and verifies SQL-based risk penalty updates and cost recomputation. |
-| `routing/sql/route_change.py` | Verifies that routing paths change or update their metrics after a hazard event. |
-| `routing/sql/accessibility.py` | Computes canonical `public.cell_accessibility` metrics and exports CSV handoff for readiness integration. |
-| `routing/testing/edge_cases.py` | Validates route behavior for out-of-bounds/same-node/disconnected cases. |
-| `routing/testing/random_route_output.py` | Generates randomized route GeoJSON output into `routing/artifacts`. |
-| `routing/testing/scenario_generator.py` | Generates routing test scenario fixtures into `routing/testing/fixtures`. |
-
-## Query Contract for Backend
-Function: get_route(start_lat, start_lon, end_lat, end_lon, algorithm="dijkstra")
-
-Input:
-| Input | Data Type | Description |
-| --- | --- | --- |
-| `start_lat / lon` | float | WGS84 coordinates of the user. |
-| `end_lat / lon` | float | WGS84 coordinates of the destination/shelter. |
-| `algorithm` | string | "dijkstra" (standard) or "astar" (faster for long distances). |
-
-Output (If Success):
 ```bash
-{
-  "status": "success",
-  "distance_km": 5.42,
-  "eta_minutes": 12.5,
-  "geojson": { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [...] } }
-}
+poetry run python -m routing.data.src.shelter
 ```
+
+Frontend `npm run dev` / `npm run build` auto-syncs this file into `apps/frontend/public/pj_shelters.csv`.
