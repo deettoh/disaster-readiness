@@ -199,9 +199,10 @@ disaster-readiness/
 ├── apps/
 │   ├── api/                # FastAPI backend service
 │   └── frontend/           # React + MapLibre web app
+├── assets/                # Screenshots of prototype UI
 ├── data/                   # External, processed, and sample datasets
+├── docs/                # Project report and demo video
 ├── routing/                # pgRouting SQL, graph prep, accessibility
-├── scripts/                # Automation and utility scripts
 ├── supabase/               # Migrations, seeds, DB config
 └── tests/                  # All test suites
 ```
@@ -246,4 +247,4 @@ Full screenshot gallery: [docs/screenshots/README.md](docs/screenshots/README.md
 ## Notes
 
 - Poetry is initialized at repository root (`pyproject.toml`, `poetry.lock`, `.venv`).
-
+- Report and demo video link can be found in [`docs/`](docs/README.md) |
