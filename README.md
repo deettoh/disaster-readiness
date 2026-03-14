@@ -6,6 +6,23 @@ An AI based disaster readiness web application for Malaysia that lets users subm
 
 ---
 
+## Table of Contents
+
+- [Features](#features)
+- [Live Demo](#live-demo)
+- [Screenshots](#screenshots)
+- [Getting Started](#getting-started)
+- [Architecture](#architecture)
+- [Internal Layers](#internal-layers)
+- [Tech Stack](#tech-stack)
+- [Project Structure](#project-structure)
+- [API Endpoints](#api-endpoints)
+- [AI Modules](#ai-modules)
+- [Deployment](#deployment)
+- [Notes](#notes)
+
+---
+
 ## Features
 
 - **Community hazard reporting** — submit photos and GPS location from any phone browser (camera, file upload, or pin-drop fallback)
@@ -16,6 +33,89 @@ An AI based disaster readiness web application for Malaysia that lets users subm
 - **Real-time alerts** — auto-generated when readiness scores cross defined thresholds
 - **Risk imputation** — XGBoost baseline vulnerability model using elevation, slope, river proximity, hotspot distance, road density, and travel time
 - **Responsible AI** — confidence thresholds, model versioning, redacted-only image storage, temporary retention, consent flow
+
+---
+
+## Live Demo
+
+Try the deployed app here: https://disaster-readiness-nu.vercel.app
+
+> You can still follow the local setup at [Getting Started](#getting-started) if you want to run the full stack on your machine.
+
+---
+
+## Screenshots
+
+### Landing Page
+![Landing Page](assets/screenshots/landing_page.png)
+
+### Readiness Panel
+![Readiness Panel](assets/screenshots/readiness_panel.png)
+
+### Hazard Panel
+![Hazard Panel](assets/screenshots/hazard_panel.png)
+
+Full screenshot gallery: [assets/screenshots/README.md](assets/screenshots/README.md)
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- Python 3.11+ (managed via [Poetry](https://python-poetry.org/))
+- Node.js 18+ and npm
+- Docker (optional, for containerized running)
+- Supabase CLI (for database management)
+- A Supabase project with PostGIS and pgRouting enabled
+
+### 1. Clone and configure
+
+```bash
+git clone https://github.com/deettoh/disaster-readiness.git && cd disaster-readiness
+cp .env.example .env
+# Edit .env with your DATABASE_URL, Supabase keys, etc.
+```
+
+### 2. Install dependencies
+
+```bash
+# Python (API + image processing + AI)
+poetry install
+
+# Frontend
+cd apps/frontend && npm install && cd ../..
+```
+
+### 3. Seed the database
+
+A sequence of commands must be run in order from the project root:
+
+See [`routing/README.md`](routing/README.md) for detailed routing setup and [`supabase/README.md`](supabase/README.md) for database details.
+
+### 4. Run the application
+
+#### Without Docker
+
+```bash
+# Terminal 1: Start API
+poetry run uvicorn app.main:app --host 0.0.0.0 --port 8000 --app-dir apps/api/src
+
+# Terminal 2: Start frontend
+cd apps/frontend && npm run dev
+```
+
+#### With Docker
+
+```bash
+# Backend only
+docker compose up --build
+
+# Full stack (API + frontend)
+docker compose --profile frontend up --build
+```
+
+See [`DOCKER.md`](DOCKER.md) for the full container runbook.
 
 ---
 
@@ -107,6 +207,27 @@ The system is organized into clearly separated layers:
 
 ---
 
+## Project Structure
+
+```text
+disaster-readiness/
+├── ai/
+│   ├── classification/     # Hazard image classification model
+│   ├── imputation/         # Risk/vulnerability imputation model
+│   └── redaction/          # Face + plate privacy redaction
+├── apps/
+│   ├── api/                # FastAPI backend service
+│   └── frontend/           # React + MapLibre web app
+├── assets/                 # Screenshots of prototype UI
+├── data/                   # External, processed, and sample datasets
+├── docs/                   # Project report and demo video
+├── routing/                # pgRouting SQL, graph prep, accessibility
+├── supabase/               # Migrations, seeds, DB config
+└── tests/                  # All test suites
+```
+
+---
+
 ## API Endpoints
 
 All endpoints are prefixed with `/api/v1`. Full endpoint details in [`apps/api/README.md`](apps/api/README.md).
@@ -128,87 +249,6 @@ Interactive API docs: `http://localhost:8000/docs`
 
 ---
 
-## Getting Started
-
-### Prerequisites
-
-- Python 3.11+ (managed via [Poetry](https://python-poetry.org/))
-- Node.js 18+ and npm
-- Docker (optional, for containerized running)
-- Supabase CLI (for database management)
-- A Supabase project with PostGIS and pgRouting enabled
-
-### 1. Clone and configure
-
-```bash
-git clone https://github.com/deettoh/disaster-readiness.git && cd disaster-readiness
-cp .env.example .env
-# Edit .env with your DATABASE_URL, Supabase keys, etc.
-```
-
-### 2. Install dependencies
-
-```bash
-# Python (API + image processing + AI)
-poetry install
-
-# Frontend
-cd apps/frontend && npm install && cd ../..
-```
-
-### 3. Seed the database
-
-A sequence of commands must be run in order from the project root:
-
-See [`routing/README.md`](routing/README.md) for detailed routing setup and [`supabase/README.md`](supabase/README.md) for database details.
-
-### 4. Run the application
-
-#### Without Docker
-
-```bash
-# Terminal 1: Start API
-poetry run uvicorn app.main:app --host 0.0.0.0 --port 8000 --app-dir apps/api/src
-
-# Terminal 2: Start frontend
-cd apps/frontend && npm run dev
-```
-
-#### With Docker
-
-```bash
-# Backend only
-docker compose up --build
-
-# Full stack (API + frontend)
-docker compose --profile frontend up --build
-```
-
-See [`DOCKER.md`](DOCKER.md) for the full container runbook.
-
----
-
-## Project Structure
-
-```text
-disaster-readiness/
-├── ai/
-│   ├── classification/     # Hazard image classification model
-│   ├── imputation/         # Risk/vulnerability imputation model
-│   └── redaction/          # Face + plate privacy redaction
-├── apps/
-│   ├── api/                # FastAPI backend service
-│   └── frontend/           # React + MapLibre web app
-├── assets/                # Screenshots of prototype UI
-├── data/                   # External, processed, and sample datasets
-├── docs/                # Project report and demo video
-├── routing/                # pgRouting SQL, graph prep, accessibility
-├── supabase/               # Migrations, seeds, DB config
-└── tests/                  # All test suites
-```
-
----
-
 ## AI Modules
 
 | Module | Model | Purpose | Details |
@@ -219,27 +259,12 @@ disaster-readiness/
 
 ---
 
-## Screenshots
-
-### Landing Page
-![Landing Page](assets/screenshots/landing_page.png)
-
-### Readiness Panel
-![Readiness Panel](assets/screenshots/readiness_panel.png)
-
-### Hazard Panel
-![Hazard Panel](assets/screenshots/hazard_panel.png)
-
-Full screenshot gallery: [docs/screenshots/README.md](docs/screenshots/README.md)
-
----
-
 ## Deployment
 
 | Service | Platform | Notes |
 | --- | --- | --- |
 | Frontend | Vercel | Static React build |
-| API | Render | Single Docker container (API + image processing) |
+| API | DigitalOcean | Single Docker container (API + image processing) |
 | Database + Storage | Supabase | Managed PostgreSQL + PostGIS + pgRouting + Storage |
 
 ---
